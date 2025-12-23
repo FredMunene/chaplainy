@@ -3,8 +3,10 @@ pragma solidity ^0.8.23;
 
 import "forge-std/Test.sol";
 import "../src/QuizSCA.sol";
+import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 contract QuizSCATest is Test {
+    using MessageHashUtils for bytes32;
     QuizSCA private quiz;
 
     uint256 private attestorPk;
