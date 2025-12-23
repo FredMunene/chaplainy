@@ -1,0 +1,49 @@
+{
+  "name": "quiz_fetch",
+  "version": "0.1.0",
+  "description": "Fetch trivia questions, hash correct answers, and cache to Supabase.",
+  "chain_id": "{{ENV.CHAIN_ID}}",
+  "sender": "{{ENV.SENDER_ADDRESS}}",
+  "delegate": "{{ENV.DELEGATE_ADDRESS}}",
+  "attestor": "{{ENV.ATTESTOR_CONFIG}}",
+  "rpc_url": "{{ENV.RPC_URL}}",
+  "sponsor_execution_fee": true,
+  "value": "0",
+  "intent": {
+    "id": "{{INTENT_ID}}",
+    "signature": "{{INTENT_SIGNATURE}}",
+    "deadline": "{{INTENT_DEADLINE}}"
+  },
+  "steps": [
+    {
+      "id": "fetch_trivia",
+      "type": "http",
+      "method": "GET",
+      "url": "{{ENV.TRIVIA_URL}}",
+      "result": "trivia_response"
+    },
+    {
+      "id": "normalize_questions",
+      "type": "transform",
+      "input": "{{steps.fetch_trivia.result}}",
+      "result": "normalized_questions"
+    },
+    {
+      "id": "hash_correct_answers",
+      "type": "hash",
+      "input": "{{steps.normalize_questions.result}}",
+      "result": "questions_with_hashes"
+    },
+    {
+      "id": "store_questions",
+      "type": "supabase_insert",
+      "table": "questions",
+      "input": "{{steps.hash_correct_answers.result}}",
+      "result": "stored_questions"
+    }
+  ],
+  "output": {
+    "questions": "{{steps.normalize_questions.result}}",
+    "sessionNonce": "{{ENV.SESSION_NONCE}}"
+  }
+}
