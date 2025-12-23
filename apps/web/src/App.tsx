@@ -18,6 +18,12 @@ type CreatedSession = SessionDraft & {
   createdAt: string
 }
 
+type QuizQuestion = {
+  id: string
+  prompt: string
+  choices: string[]
+}
+
 const defaultDraft: SessionDraft = {
   title: 'Chaplain Quick Quiz',
   count: 10,
@@ -29,6 +35,9 @@ const defaultDraft: SessionDraft = {
 function App() {
   const [draft, setDraft] = useState<SessionDraft>(defaultDraft)
   const [session, setSession] = useState<CreatedSession | null>(null)
+  const [questions, setQuestions] = useState<QuizQuestion[]>([])
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const [selectedAnswer, setSelectedAnswer] = useState('')
   const [isCreating, setIsCreating] = useState(false)
   const [error, setError] = useState('')
   const isReady = isKrnlConfigured
@@ -147,7 +156,38 @@ function App() {
       id,
       createdAt,
     })
+    setQuestions([
+      {
+        id: crypto.randomUUID(),
+        prompt: 'Saturn is the only planet with rings.',
+        choices: ['True', 'False'],
+      },
+      {
+        id: crypto.randomUUID(),
+        prompt: 'The Great Wall of China is visible from space with the naked eye.',
+        choices: ['True', 'False'],
+      },
+      {
+        id: crypto.randomUUID(),
+        prompt: 'A group of crows is called a murder.',
+        choices: ['True', 'False'],
+      },
+    ])
+    setCurrentIndex(0)
+    setSelectedAnswer('')
     setIsCreating(false)
+  }
+
+  const currentQuestion = questions[currentIndex]
+
+  const submitAnswer = () => {
+    if (!selectedAnswer) {
+      setError('Select an answer before submitting.')
+      return
+    }
+    setError('')
+    setSelectedAnswer('')
+    setCurrentIndex((prev) => Math.min(prev + 1, questions.length))
   }
 
   return (
@@ -265,6 +305,41 @@ function App() {
             <span>Share link</span>
             <input readOnly value={sessionLink} />
           </div>
+        </section>
+      )}
+
+      {session && currentQuestion && (
+        <section className="panel">
+          <h2>Quiz in progress</h2>
+          <div className="question">
+            <div className="question-header">
+              <span>
+                Question {currentIndex + 1} of {questions.length}
+              </span>
+            </div>
+            <h3>{currentQuestion.prompt}</h3>
+            <div className="choices">
+              {currentQuestion.choices.map((choice) => (
+                <button
+                  key={choice}
+                  className={selectedAnswer === choice ? 'choice active' : 'choice'}
+                  onClick={() => setSelectedAnswer(choice)}
+                >
+                  {choice}
+                </button>
+              ))}
+            </div>
+            <button className="primary" onClick={submitAnswer}>
+              Submit answer
+            </button>
+          </div>
+        </section>
+      )}
+
+      {session && !currentQuestion && questions.length > 0 && (
+        <section className="panel">
+          <h2>Quiz complete</h2>
+          <p>You have answered all questions. Leaderboard updates soon.</p>
         </section>
       )}
     </>
