@@ -24,7 +24,7 @@
 - [x] Add Privy + KRNL SDK wiring to frontend.
 - [x] Build lobby and session creation flow.
 - [x] Wire lobby creation to Supabase and KRNL quiz_fetch workflow.
-- [ ] Build quiz gameplay UI.
+- [x] Build quiz gameplay UI.
 - [ ] Build leaderboard view with on-chain events.
 - [ ] Add observability and audit logging.
 - [ ] Deploy contract to KRNL Testnet.
