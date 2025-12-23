@@ -8,6 +8,7 @@
 - [x] List external resources and env configuration.
 - [x] Create PRD.
 - [x] Create implementation plan (feature-by-feature).
+- [x] Add Supabase schema file for MVP tables.
 
 - [ ] Create Supabase project and apply schema.
 - [ ] Implement `quiz_fetch` workflow and connect to trivia API.
