@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { usePrivy } from '@privy-io/react-auth'
 import { useKRNL } from '@krnl-dev/sdk-react-7702'
 import './App.css'
@@ -47,7 +47,7 @@ function App() {
   const sessionLink = useMemo(() => {
     if (!session) return ''
     return `${window.location.origin}/session/${session.id}`
-  }, [session])
+  }, [session, supabase])
 
   const walletAddress = useMemo(() => {
     const account = user as
@@ -156,27 +156,42 @@ function App() {
       id,
       createdAt,
     })
-    setQuestions([
-      {
-        id: crypto.randomUUID(),
-        prompt: 'Saturn is the only planet with rings.',
-        choices: ['True', 'False'],
-      },
-      {
-        id: crypto.randomUUID(),
-        prompt: 'The Great Wall of China is visible from space with the naked eye.',
-        choices: ['True', 'False'],
-      },
-      {
-        id: crypto.randomUUID(),
-        prompt: 'A group of crows is called a murder.',
-        choices: ['True', 'False'],
-      },
-    ])
-    setCurrentIndex(0)
-    setSelectedAnswer('')
     setIsCreating(false)
   }
+
+  useEffect(() => {
+    if (!supabase || !session) return
+
+    const loadQuestions = async () => {
+      const { data, error: fetchError } = await supabase
+        .from('questions')
+        .select('id, question, choices')
+        .eq('session_id', session.id)
+        .order('index_in_session', { ascending: true })
+
+      if (fetchError) {
+        setError(fetchError.message)
+        return
+      }
+
+      if (!data || data.length === 0) {
+        setQuestions([])
+        setCurrentIndex(0)
+        return
+      }
+
+      const mapped = data.map((row) => ({
+        id: row.id as string,
+        prompt: row.question as string,
+        choices: Array.isArray(row.choices) ? row.choices : [],
+      }))
+      setQuestions(mapped)
+      setCurrentIndex(0)
+      setSelectedAnswer('')
+    }
+
+    loadQuestions()
+  }, [session])
 
   const currentQuestion = questions[currentIndex]
 
