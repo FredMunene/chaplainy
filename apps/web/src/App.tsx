@@ -2,6 +2,7 @@ import { useState } from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
 import './App.css'
+import { isKrnlConfigured } from './krnlConfig'
 
 function App() {
   const [count, setCount] = useState(0)
@@ -17,6 +18,12 @@ function App() {
         </a>
       </div>
       <h1>Vite + React</h1>
+      {!isKrnlConfigured && (
+        <p className="read-the-docs">
+          Set `VITE_PRIVY_APP_ID`, `VITE_KRNL_NODE_URL`, and
+          `VITE_KRNL_DELEGATED_CONTRACT` in `apps/web/.env` to enable KRNL.
+        </p>
+      )}
       <div className="card">
         <button onClick={() => setCount((count) => count + 1)}>
           count is {count}
