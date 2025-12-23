@@ -11,8 +11,8 @@ Build a Kahoot-like on-chain quiz game that uses KRNL workflows to privately ver
 - As an **admin**, I can moderate trivia sources, manage reward pools, and audit proofs.
 
 ## Functional requirements
-- Fetch questions dynamically from a trivia API (default: Open Trivia DB) via `quiz_fetch.krnl`.
-- Validate answers off-chain via `quiz_verify.krnl`; return an attested proof with score metadata.
+- Fetch questions dynamically from a trivia API (default: Open Trivia DB) via KRNL workflow `quiz_fetch` (JSON workflow config).
+- Validate answers off-chain via KRNL workflow `quiz_verify`; return an attested proof with score metadata.
 - Contract `QuizSCA.sol` must:
   - Verify KRNL attestation signature, nonce, and expiration.
   - Update on-chain leaderboard (scores per session, per player).
@@ -103,10 +103,18 @@ create table scores (
 RLS: `profiles.wallet_address = auth.jwt()->>'wallet'`; `sessions.host_wallet = current user` for writes; `submissions.player_wallet = current user` for insert/select.
 
 ## APIs/workflows
-- `quiz_fetch.krnl(input: {source, count, difficulty}) -> {questions[], sessionNonce}`  
+- `quiz_fetch(input: {source, count, difficulty}) -> {questions[], sessionNonce}`  
   - Calls trivia API, hashes correct answers, returns question payload for client, stores hashed answers in Supabase.
-- `quiz_verify.krnl(input: {sessionId, questionId, answer, sessionNonce, player}) -> {attestation}`  
+- `quiz_verify(input: {sessionId, questionId, answer, sessionNonce, player}) -> {attestation}`  
   - Checks nonce freshness, compares hashed answers, outputs attestation payload: `{sessionId, player, questionId, correct, scoreDelta, nonce, expiry, proofHash}` signed by attestor.
+
+### KRNL doc notes (latest)
+- KRNL defines a workflow as a **DAG**: "A **workflow** is a **directed acyclic graph (DAG)** of execution steps that combine Web2 services, blockchain interactions, and AI logic into a single verifiable process."  
+  - Source: https://docs.krnl.xyz/core-concepts/workflows
+- Workflows are represented as **JSON configs** in the docs (see "Structure of a Workflow" example). The docs do not specify a file extension, so name the files based on KRNL Studio/CLI output (commonly JSON).  
+  - Source: https://docs.krnl.xyz/core-concepts/workflows
+- The SDK requires Privy for account abstraction: "The KRNL SDK requires **Privy** for wallet integration and must be used with `@privy-io/react-auth`."  
+  - Source: https://docs.krnl.xyz/krnl-sdk/usage
 
 ## Smart contract responsibilities
 - Validate attestation (attestor address, expiry, nonce, session binding).
