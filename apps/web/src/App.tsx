@@ -195,12 +195,72 @@ function App() {
 
   const currentQuestion = questions[currentIndex]
 
-  const submitAnswer = () => {
+  const submitAnswer = async () => {
     if (!selectedAnswer) {
       setError('Select an answer before submitting.')
       return
     }
     setError('')
+    if (!session || !currentQuestion) {
+      setError('No active question found.')
+      return
+    }
+
+    if (!executeWorkflowFromTemplate) {
+      setError('KRNL workflow executor is unavailable.')
+      return
+    }
+
+    const template = {
+      action: 'quiz_verify',
+      params: {
+        sessionId: '{{SESSION_ID}}',
+        questionId: '{{QUESTION_ID}}',
+        answer: '{{ANSWER}}',
+        sessionNonce: '{{SESSION_NONCE}}',
+        player: '{{PLAYER}}',
+      },
+    }
+
+    const params = {
+      '{{SESSION_ID}}': session.id,
+      '{{QUESTION_ID}}': currentQuestion.id,
+      '{{ANSWER}}': selectedAnswer,
+      '{{SESSION_NONCE}}': '1',
+      '{{PLAYER}}': walletAddress,
+    }
+
+    let attestation: any
+    try {
+      attestation = await executeWorkflowFromTemplate(template, params)
+    } catch (err) {
+      setError('KRNL answer verification failed.')
+      return
+    }
+
+    const contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS as string | undefined
+    if (!contractAddress) {
+      setError('Missing VITE_CONTRACT_ADDRESS env var.')
+      return
+    }
+
+    const abi = parseAbi([
+      'function submitProof((bytes32 sessionId,address player,bytes32 questionId,uint256 scoreDelta,uint256 nonce,uint256 expiry,bytes32 proofHash,bytes signature) attestation)',
+    ])
+    void encodeFunctionData({
+      abi,
+      functionName: 'submitProof',
+      args: [attestation],
+    })
+
+    await supabase?.from('submissions').insert({
+      session_id: session.id,
+      player_wallet: walletAddress,
+      question_id: currentQuestion.id,
+      answer_choice: selectedAnswer,
+      proof_hash: attestation?.proofHash ?? null,
+    })
+
     setSelectedAnswer('')
     setCurrentIndex((prev) => Math.min(prev + 1, questions.length))
   }
@@ -362,3 +422,4 @@ function App() {
 }
 
 export default App
+import { parseAbi, encodeFunctionData } from 'viem'
