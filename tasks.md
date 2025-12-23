@@ -14,7 +14,7 @@
 - [ ] Implement `quiz_verify` workflow and attestation signing.
 - [ ] Build `QuizSCA.sol` with attestation verification and replay protection.
 - [x] Scaffold frontend (Vite + React + TS).
-- [ ] Add Privy + KRNL SDK wiring to frontend.
+- [x] Add Privy + KRNL SDK wiring to frontend.
 - [ ] Build lobby and session creation flow.
 - [ ] Build quiz gameplay UI.
 - [ ] Build leaderboard view with on-chain events.
