@@ -12,7 +12,7 @@
 - [x] Create workflows folder and README.
 - [x] Add Supabase RLS policy file and setup guide.
 
-- [ ] Create Supabase project and apply schema.
+- [x] Create Supabase project and apply schema.
 - [ ] Implement `quiz_fetch` workflow and connect to trivia API.
 - [ ] Implement `quiz_verify` workflow and attestation signing.
 - [ ] Build `QuizSCA.sol` with attestation verification and replay protection.
