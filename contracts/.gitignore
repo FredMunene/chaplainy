@@ -1,0 +1,8 @@
+# Forge
+.forge
+forge-config.json
+artifacts/
+build/
+out/
+broadcast/
+cache/
