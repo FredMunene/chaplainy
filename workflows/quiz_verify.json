@@ -1,0 +1,74 @@
+{
+  "name": "quiz_verify",
+  "version": "0.1.0",
+  "description": "Verify a player's answer, compute score, and return an attestation.",
+  "chain_id": "{{ENV.CHAIN_ID}}",
+  "sender": "{{ENV.SENDER_ADDRESS}}",
+  "delegate": "{{ENV.DELEGATE_ADDRESS}}",
+  "attestor": "{{ENV.ATTESTOR_CONFIG}}",
+  "rpc_url": "{{ENV.RPC_URL}}",
+  "sponsor_execution_fee": true,
+  "value": "0",
+  "intent": {
+    "id": "{{INTENT_ID}}",
+    "signature": "{{INTENT_SIGNATURE}}",
+    "deadline": "{{INTENT_DEADLINE}}"
+  },
+  "steps": [
+    {
+      "id": "load_question",
+      "type": "supabase_select",
+      "table": "questions",
+      "filter": {
+        "id": "{{INPUT.questionId}}"
+      },
+      "result": "question_record"
+    },
+    {
+      "id": "verify_answer",
+      "type": "hash_compare",
+      "input": {
+        "answer": "{{INPUT.answer}}",
+        "correct_hash": "{{steps.load_question.result.correct_hash}}"
+      },
+      "result": "verification_result"
+    },
+    {
+      "id": "compute_score",
+      "type": "transform",
+      "input": "{{steps.verify_answer.result}}",
+      "result": "score_delta"
+    },
+    {
+      "id": "sign_attestation",
+      "type": "attest",
+      "input": {
+        "sessionId": "{{INPUT.sessionId}}",
+        "player": "{{INPUT.player}}",
+        "questionId": "{{INPUT.questionId}}",
+        "correct": "{{steps.verify_answer.result.correct}}",
+        "scoreDelta": "{{steps.compute_score.result}}",
+        "nonce": "{{INPUT.sessionNonce}}",
+        "expiry": "{{ENV.ATTESTATION_EXPIRY}}"
+      },
+      "result": "attestation"
+    },
+    {
+      "id": "store_submission",
+      "type": "supabase_insert",
+      "table": "submissions",
+      "input": {
+        "session_id": "{{INPUT.sessionId}}",
+        "player_wallet": "{{INPUT.player}}",
+        "question_id": "{{INPUT.questionId}}",
+        "answer_choice": "{{INPUT.answer}}",
+        "proof_hash": "{{steps.sign_attestation.result.proofHash}}",
+        "workflow_run_id": "{{ENV.WORKFLOW_RUN_ID}}"
+      },
+      "result": "submission_record"
+    }
+  ],
+  "output": {
+    "attestation": "{{steps.sign_attestation.result}}"
+  }
+}
