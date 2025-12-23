@@ -18,6 +18,7 @@
 - [ ] Implement `quiz_fetch` workflow and connect to trivia API.
 - [ ] Implement `quiz_verify` workflow and attestation signing.
 - [x] Build `QuizSCA.sol` with attestation verification and replay protection.
+- [x] Add Foundry tests for `QuizSCA.sol`.
 - [x] Scaffold frontend (Vite + React + TS).
 - [x] Add Privy + KRNL SDK wiring to frontend.
 - [ ] Build lobby and session creation flow.
