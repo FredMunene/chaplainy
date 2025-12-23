@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react'
+import { usePrivy } from '@privy-io/react-auth'
+import { useKRNL } from '@krnl-dev/sdk-react-7702'
 import './App.css'
 import { isKrnlConfigured } from './krnlConfig'
 import { supabase } from './supabaseClient'
@@ -30,11 +32,24 @@ function App() {
   const [isCreating, setIsCreating] = useState(false)
   const [error, setError] = useState('')
   const isReady = isKrnlConfigured
+  const { ready, authenticated, login, logout, user } = usePrivy()
+  const { isAuthorized, enableSmartAccount, executeWorkflowFromTemplate } = useKRNL()
 
   const sessionLink = useMemo(() => {
     if (!session) return ''
     return `${window.location.origin}/session/${session.id}`
   }, [session])
+
+  const walletAddress = useMemo(() => {
+    const account = user as
+      | { wallet?: { address?: string }; linkedAccounts?: Array<{ type?: string; address?: string }> }
+      | undefined
+    return (
+      account?.wallet?.address ??
+      account?.linkedAccounts?.find((item) => item.type === 'wallet')?.address ??
+      ''
+    )
+  }, [user])
 
   const updateDraft = <K extends keyof SessionDraft>(key: K, value: SessionDraft[K]) => {
     setDraft((prev) => ({ ...prev, [key]: value }))
@@ -48,24 +63,81 @@ function App() {
       return
     }
 
+    if (!ready) {
+      setError('Wallet is still loading. Try again in a moment.')
+      return
+    }
+
+    if (!authenticated) {
+      setError('Connect your wallet to create a lobby.')
+      return
+    }
+
+    if (!walletAddress) {
+      setError('No wallet address found in session.')
+      return
+    }
+
     setIsCreating(true)
     const id = crypto.randomUUID()
     const createdAt = new Date().toISOString()
+    const chainId = Number(import.meta.env.VITE_CHAIN_ID ?? 84532)
 
     const { error: insertError } = await supabase.from('sessions').insert({
       id,
-      host_wallet: '0xHOST',
+      host_wallet: walletAddress,
       title: draft.title,
       source: 'opentdb',
       status: 'draft',
       entry_cap: null,
       prize_pool_wei: null,
-      chain_id: 84532,
+      chain_id: chainId,
       created_at: createdAt,
     })
 
     if (insertError) {
       setError(insertError.message)
+      setIsCreating(false)
+      return
+    }
+
+    if (!isAuthorized) {
+      try {
+        await enableSmartAccount()
+      } catch (err) {
+        setError('Failed to authorize KRNL smart account.')
+        setIsCreating(false)
+        return
+      }
+    }
+
+    if (executeWorkflowFromTemplate) {
+      const template = {
+        action: 'quiz_fetch',
+        params: {
+          sessionId: '{{SESSION_ID}}',
+          count: '{{COUNT}}',
+          category: '{{CATEGORY}}',
+          difficulty: '{{DIFFICULTY}}',
+          type: '{{TYPE}}',
+        },
+      }
+      const params = {
+        '{{SESSION_ID}}': id,
+        '{{COUNT}}': String(draft.count),
+        '{{CATEGORY}}': String(draft.category),
+        '{{DIFFICULTY}}': draft.difficulty,
+        '{{TYPE}}': draft.type,
+      }
+      try {
+        await executeWorkflowFromTemplate(template, params)
+      } catch (err) {
+        setError('KRNL workflow failed to start.')
+        setIsCreating(false)
+        return
+      }
+    } else {
+      setError('KRNL workflow executor is unavailable.')
       setIsCreating(false)
       return
     }
@@ -88,6 +160,20 @@ function App() {
             Create a lobby, fetch questions from Open Trivia DB, and verify answers
             with KRNL attestations.
           </p>
+        </div>
+        <div className="toolbar">
+          {authenticated ? (
+            <>
+              <span className="wallet">{walletAddress || 'Wallet connected'}</span>
+              <button className="ghost" onClick={logout}>
+                Disconnect
+              </button>
+            </>
+          ) : (
+            <button className="ghost" onClick={login}>
+              Connect wallet
+            </button>
+          )}
         </div>
         {!isReady && (
           <div className="banner">
