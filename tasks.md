@@ -22,7 +22,7 @@
 - [x] Add Foundry tests for `QuizSCA.sol`.
 - [x] Scaffold frontend (Vite + React + TS).
 - [x] Add Privy + KRNL SDK wiring to frontend.
-- [ ] Build lobby and session creation flow.
+- [x] Build lobby and session creation flow.
 - [ ] Build quiz gameplay UI.
 - [ ] Build leaderboard view with on-chain events.
 - [ ] Add observability and audit logging.
