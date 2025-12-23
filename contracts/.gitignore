@@ -6,3 +6,8 @@ build/
 out/
 broadcast/
 cache/
+src/ITargetBase.sol
+src/MockUSDC.sol
+src/RealEstateInvestment.sol
+src/TargetBase.sol
+script/Deploy.s.sol
