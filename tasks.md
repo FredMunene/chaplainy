@@ -11,6 +11,7 @@
 - [x] Add Supabase schema file for MVP tables.
 - [x] Create workflows folder and README.
 - [x] Add Supabase RLS policy file and setup guide.
+- [x] Draft KRNL workflow JSON templates.
 
 - [x] Create Supabase project and apply schema.
 - [ ] Implement `quiz_fetch` workflow and connect to trivia API.
