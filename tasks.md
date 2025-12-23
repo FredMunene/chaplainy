@@ -26,6 +26,7 @@
 - [x] Wire lobby creation to Supabase and KRNL quiz_fetch workflow.
 - [x] Build quiz gameplay UI.
 - [ ] Build leaderboard view with on-chain events.
+- [x] Load quiz questions from Supabase for active session.
 - [ ] Add observability and audit logging.
 - [ ] Deploy contract to KRNL Testnet.
 - [ ] Deploy workflows to KRNL node.
