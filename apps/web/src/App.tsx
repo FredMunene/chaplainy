@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import './App.css'
 import { isKrnlConfigured } from './krnlConfig'
+import { supabase } from './supabaseClient'
 
 type SessionDraft = {
   title: string
@@ -26,6 +27,8 @@ const defaultDraft: SessionDraft = {
 function App() {
   const [draft, setDraft] = useState<SessionDraft>(defaultDraft)
   const [session, setSession] = useState<CreatedSession | null>(null)
+  const [isCreating, setIsCreating] = useState(false)
+  const [error, setError] = useState('')
   const isReady = isKrnlConfigured
 
   const sessionLink = useMemo(() => {
@@ -37,13 +40,42 @@ function App() {
     setDraft((prev) => ({ ...prev, [key]: value }))
   }
 
-  const createSession = () => {
+  const createSession = async () => {
+    setError('')
+
+    if (!supabase) {
+      setError('Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.')
+      return
+    }
+
+    setIsCreating(true)
     const id = crypto.randomUUID()
+    const createdAt = new Date().toISOString()
+
+    const { error: insertError } = await supabase.from('sessions').insert({
+      id,
+      host_wallet: '0xHOST',
+      title: draft.title,
+      source: 'opentdb',
+      status: 'draft',
+      entry_cap: null,
+      prize_pool_wei: null,
+      chain_id: 84532,
+      created_at: createdAt,
+    })
+
+    if (insertError) {
+      setError(insertError.message)
+      setIsCreating(false)
+      return
+    }
+
     setSession({
       ...draft,
       id,
-      createdAt: new Date().toISOString(),
+      createdAt,
     })
+    setIsCreating(false)
   }
 
   return (
@@ -122,8 +154,9 @@ function App() {
           </label>
         </div>
         <button className="primary" onClick={createSession}>
-          Create lobby
+          {isCreating ? 'Creating...' : 'Create lobby'}
         </button>
+        {error && <p className="error">{error}</p>}
       </section>
 
       {session && (
