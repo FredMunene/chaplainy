@@ -2,6 +2,13 @@
   "name": "quiz_verify",
   "version": "0.1.0",
   "description": "Verify a player's answer, compute score, and return an attestation.",
+  "inputs": {
+    "sessionId": "{{INPUT.sessionId}}",
+    "questionId": "{{INPUT.questionId}}",
+    "answer": "{{INPUT.answer}}",
+    "sessionNonce": "{{INPUT.sessionNonce}}",
+    "player": "{{INPUT.player}}"
+  },
   "chain_id": "{{ENV.CHAIN_ID}}",
   "sender": "{{ENV.SENDER_ADDRESS}}",
   "delegate": "{{ENV.DELEGATE_ADDRESS}}",
