@@ -46,7 +46,7 @@ contract QuizSCA is Ownable {
     error QuestionAlreadyAnswered();
     error InvalidSignature();
 
-    constructor(address initialAttestor) {
+    constructor(address initialAttestor) Ownable(msg.sender) {
         if (initialAttestor == address(0)) {
             revert InvalidAttestor();
         }
