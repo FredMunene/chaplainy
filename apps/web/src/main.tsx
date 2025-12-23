@@ -1,7 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { PrivyProvider } from '@privy-io/react-auth'
-import { KRNLProvider } from '@krnl/react-sdk'
+import { KRNLProvider } from '@krnl-dev/sdk-react-7702'
 import './index.css'
 import App from './App.tsx'
 import { isKrnlConfigured, krnlConfig, privyAppId } from './krnlConfig'
