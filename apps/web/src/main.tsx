@@ -12,14 +12,16 @@ if (!root) {
   throw new Error('Root element not found')
 }
 
-const app = isKrnlConfigured && krnlConfig ? (
-  <PrivyProvider appId={privyAppId ?? ''}>
+if (!isKrnlConfigured || !krnlConfig || !privyAppId) {
+  throw new Error('KRNL and Privy configuration is required.')
+}
+
+const app = (
+  <PrivyProvider appId={privyAppId}>
     <KRNLProvider config={krnlConfig}>
       <App />
     </KRNLProvider>
   </PrivyProvider>
-) : (
-  <App />
 )
 
 createRoot(root).render(<StrictMode>{app}</StrictMode>)
