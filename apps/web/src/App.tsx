@@ -53,6 +53,11 @@ function App() {
   const { isAuthorized, enableSmartAccount, executeWorkflowFromTemplate, embeddedWallet } =
     useKRNL()
 
+  const sessionIdFromPath = useMemo(() => {
+    const match = window.location.pathname.match(/^\/session\/([a-f0-9-]+)$/i)
+    return match ? match[1] : ''
+  }, [])
+
   const sessionLink = useMemo(() => {
     if (!session) return ''
     return `${window.location.origin}/session/${session.id}`
@@ -87,6 +92,37 @@ function App() {
       clearInterval(interval)
     }
   }, [session, supabase])
+
+  useEffect(() => {
+    if (!supabase || !sessionIdFromPath || session) return
+
+    const loadSession = async () => {
+      const { data, error: fetchError } = await supabase
+        .from('sessions')
+        .select('id,title,created_at')
+        .eq('id', sessionIdFromPath)
+        .single()
+
+      if (fetchError) {
+        setError(fetchError.message)
+        return
+      }
+
+      if (!data) {
+        setError('Session not found.')
+        return
+      }
+
+      setSession({
+        ...defaultDraft,
+        title: data.title,
+        id: data.id,
+        createdAt: data.created_at,
+      })
+    }
+
+    loadSession()
+  }, [sessionIdFromPath, session, supabase])
 
   const walletAddress = useMemo(() => {
     const account = user as
