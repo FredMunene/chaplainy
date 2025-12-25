@@ -93,11 +93,12 @@ function App() {
       | { wallet?: { address?: string }; linkedAccounts?: Array<{ type?: string; address?: string }> }
       | undefined
     return (
+      embeddedWallet?.address ??
       account?.wallet?.address ??
       account?.linkedAccounts?.find((item) => item.type === 'wallet')?.address ??
       ''
     )
-  }, [user])
+  }, [user, embeddedWallet])
 
   const updateDraft = <K extends keyof SessionDraft>(key: K, value: SessionDraft[K]) => {
     setDraft((prev) => ({ ...prev, [key]: value }))
@@ -123,7 +124,7 @@ function App() {
     }
 
     if (!walletAddress) {
-      setError('No wallet address found in session.')
+      setError('No wallet address found. Use a Privy embedded wallet and try again.')
       return
     }
 
