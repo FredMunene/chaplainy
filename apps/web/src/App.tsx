@@ -178,11 +178,12 @@ function App() {
       }
       try {
         await executeWorkflowFromTemplate(template, params)
-      } catch (err) {
-        setError('KRNL workflow failed to start.')
-        setIsCreating(false)
-        return
-      }
+    } catch (err) {
+      console.error('KRNL quiz_fetch failed', err)
+      setError(`KRNL workflow failed to start: ${String(err)}`)
+      setIsCreating(false)
+      return
+    }
     } else {
       setError('KRNL workflow executor is unavailable.')
       setIsCreating(false)
@@ -272,7 +273,8 @@ function App() {
     try {
       attestation = await executeWorkflowFromTemplate(template, params)
     } catch (err) {
-      setError('KRNL answer verification failed.')
+      console.error('KRNL quiz_verify failed', err)
+      setError(`KRNL answer verification failed: ${String(err)}`)
       return
     }
 
@@ -478,8 +480,8 @@ function App() {
           )}
         </section>
       )}
-    </>
-  )
+  
+  
 }
 
 export default App
