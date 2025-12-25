@@ -183,6 +183,31 @@ code {
   color: #1e3a8a;
 }
 
+.leaderboard {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.leaderboard-row {
+  display: grid;
+  grid-template-columns: 40px 1fr 80px;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: #f9fafb;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+}
+
+.leaderboard-row .wallet {
+  justify-self: start;
+}
+
+.leaderboard-row .score {
+  justify-self: end;
+  font-weight: 600;
+}
+
 @media (max-width: 640px) {
   #root {
     padding: 2rem 1.25rem 3rem;
