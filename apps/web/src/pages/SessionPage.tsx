@@ -18,6 +18,7 @@ export default function SessionPage() {
   const [selectedAnswer, setSelectedAnswer] = useState('')
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
   const [error, setError] = useState('')
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const { executeWorkflowFromTemplate, embeddedWallet } = useKRNL()
   const { user } = usePrivy()
   const { wallets } = useWallets()
@@ -130,6 +131,32 @@ export default function SessionPage() {
   }, [session, supabase])
 
   const currentQuestion = questions[currentIndex]
+
+  const refreshQuestions = async () => {
+    if (!supabase || !session) return
+    setIsRefreshing(true)
+    const { data, error: fetchError } = await supabase
+      .from('questions')
+      .select('id, question, choices')
+      .eq('session_id', session.id)
+      .order('index_in_session', { ascending: true })
+
+    if (fetchError) {
+      setError(fetchError.message)
+      setIsRefreshing(false)
+      return
+    }
+
+    const mapped = (data ?? []).map((row) => ({
+      id: row.id as string,
+      prompt: row.question as string,
+      choices: Array.isArray(row.choices) ? row.choices : [],
+    }))
+    setQuestions(mapped)
+    setCurrentIndex(0)
+    setSelectedAnswer('')
+    setIsRefreshing(false)
+  }
 
   const submitAnswer = async () => {
     if (!selectedAnswer) {
@@ -269,6 +296,19 @@ export default function SessionPage() {
         <section className="panel">
           <h2>Quiz complete</h2>
           <p>You have answered all questions. Leaderboard updates soon.</p>
+        </section>
+      )}
+
+      {session && questions.length === 0 && (
+        <section className="panel">
+          <h2>Questions not ready</h2>
+          <p>
+            We couldn&apos;t find questions yet. This usually means the KRNL
+            `quiz_fetch` workflow has not finished writing to Supabase.
+          </p>
+          <button className="primary" onClick={refreshQuestions} disabled={isRefreshing}>
+            {isRefreshing ? 'Refreshing...' : 'Retry question fetch'}
+          </button>
         </section>
       )}
 
