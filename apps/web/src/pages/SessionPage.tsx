@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useKRNL } from '@krnl-dev/sdk-react-7702'
-import { usePrivy } from '@privy-io/react-auth'
-import { parseAbi, encodeFunctionData } from 'viem'
+import { usePrivy, useWallets } from '@privy-io/react-auth'
+import { baseSepolia } from 'viem/chains'
+import { parseAbi, encodeFunctionData, createWalletClient, custom } from 'viem'
 import { useParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import PageHeader from '../components/PageHeader'
@@ -19,6 +20,7 @@ export default function SessionPage() {
   const [error, setError] = useState('')
   const { executeWorkflowFromTemplate, embeddedWallet } = useKRNL()
   const { user } = usePrivy()
+  const { wallets } = useWallets()
 
   const walletAddress = useMemo(() => {
     const account = user as
@@ -188,6 +190,32 @@ export default function SessionPage() {
       args: [attestation],
     })
 
+    const privyWallet =
+      wallets.find((wallet) => wallet.address?.toLowerCase() === walletAddress.toLowerCase()) ??
+      wallets[0]
+    if (!privyWallet) {
+      setError('No Privy wallet available for on-chain submission.')
+      return
+    }
+
+    const provider = await privyWallet.getEthereumProvider()
+    const walletClient = createWalletClient({
+      chain: baseSepolia,
+      transport: custom(provider),
+      account: walletAddress as `0x${string}`,
+    })
+
+    try {
+      await walletClient.sendTransaction({
+        to: contractAddress as `0x${string}`,
+        data: callData,
+      })
+    } catch (err) {
+      console.error('submitProof tx failed', err)
+      setError(`On-chain submission failed: ${String(err)}`)
+      return
+    }
+
     await supabase?.from('submissions').insert({
       session_id: session.id,
       player_wallet: walletAddress || '0xPLAYER',
@@ -195,8 +223,6 @@ export default function SessionPage() {
       answer_choice: selectedAnswer,
       proof_hash: attestation?.proofHash ?? null,
     })
-
-    void callData
 
     setSelectedAnswer('')
     setCurrentIndex((prev) => Math.min(prev + 1, questions.length))
