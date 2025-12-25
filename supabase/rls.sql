@@ -31,6 +31,11 @@ create policy "sessions_update_host"
 on sessions for update
 using (host_wallet = auth.jwt()->>'wallet');
 
+-- DEV ONLY: allow anon inserts while auth wiring is in progress (remove for prod)
+create policy "sessions_insert_anon_dev"
+on sessions for insert
+with check (true);
+
 -- Questions: read-only for all; write from service role in workflows
 create policy "questions_select_all"
 on questions for select
