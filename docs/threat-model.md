@@ -21,6 +21,7 @@
 - **API poisoning**: Validate trivia API responses; enforce schema; rate-limit; fallback to cached questions when API fails.
 - **Front-running / answer leakage**: Correct answers never sent to client; only hashed; attestation proves correctness without revealing content.
 - **Unauthorized data access**: Supabase RLS tying `wallet_address` to JWT; service role only in workflows; audit logs for privileged queries.
+- **RLS bypass in dev**: Temporary anon insert policy for `sessions` (dev only) increases spoofing risk; remove before production.
 - **Denial of service**: Cache questions; implement retries/backoff for trivia API; cap session size; queue attestation submissions; circuit breaker on contract if spam detected.
 - **Privilege escalation in admin tools**: Separate admin role in Supabase; contract owner/host-only functions guarded by Ownable/role-based access.
 - **Sybil / fake players**: Optional Privy email/phone verification; entry fee or allowlist per session; per-identity caps.
