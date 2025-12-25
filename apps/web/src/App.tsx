@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { usePrivy } from '@privy-io/react-auth'
 import { useKRNL } from '@krnl-dev/sdk-react-7702'
+import { parseAbi, encodeFunctionData } from 'viem'
 import './App.css'
 import { isKrnlConfigured } from './krnlConfig'
 import { supabase } from './supabaseClient'
@@ -24,6 +25,12 @@ type QuizQuestion = {
   choices: string[]
 }
 
+type LeaderboardEntry = {
+  player_wallet: string
+  total_score: number
+  updated_at: string
+}
+
 const defaultDraft: SessionDraft = {
   title: 'Chaplain Quick Quiz',
   count: 10,
@@ -38,6 +45,7 @@ function App() {
   const [questions, setQuestions] = useState<QuizQuestion[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [selectedAnswer, setSelectedAnswer] = useState('')
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
   const [isCreating, setIsCreating] = useState(false)
   const [error, setError] = useState('')
   const isReady = isKrnlConfigured
@@ -47,6 +55,36 @@ function App() {
   const sessionLink = useMemo(() => {
     if (!session) return ''
     return `${window.location.origin}/session/${session.id}`
+  }, [session, supabase])
+
+  useEffect(() => {
+    if (!supabase || !session) return
+
+    let isMounted = true
+
+    const loadLeaderboard = async () => {
+      const { data, error: fetchError } = await supabase
+        .from('scores')
+        .select('player_wallet,total_score,updated_at')
+        .eq('session_id', session.id)
+        .order('total_score', { ascending: false })
+
+      if (fetchError) {
+        setError(fetchError.message)
+        return
+      }
+
+      if (!isMounted) return
+      setLeaderboard((data ?? []) as LeaderboardEntry[])
+    }
+
+    loadLeaderboard()
+    const interval = setInterval(loadLeaderboard, 8000)
+
+    return () => {
+      isMounted = false
+      clearInterval(interval)
+    }
   }, [session, supabase])
 
   const walletAddress = useMemo(() => {
@@ -422,7 +460,26 @@ function App() {
       )}
     </>
   )
+      {session && (
+        <section className="panel">
+          <h2>Leaderboard</h2>
+          {leaderboard.length === 0 ? (
+            <p>No scores yet. Once proofs land on-chain, scores will appear here.</p>
+          ) : (
+            <div className="leaderboard">
+              {leaderboard.map((entry, index) => (
+                <div key={entry.player_wallet} className="leaderboard-row">
+                  <span className="rank">#{index + 1}</span>
+                  <span className="wallet">{entry.player_wallet}</span>
+                  <span className="score">{entry.total_score}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+    </>
+  )
 }
 
 export default App
-import { parseAbi, encodeFunctionData } from 'viem'
