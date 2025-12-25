@@ -30,7 +30,7 @@
 - [x] Show leaderboard from Supabase scores.
 - [x] Support session links by loading session from Supabase.
 - [x] Add dedicated session page route.
-- [ ] Submit proofs on-chain from the frontend.
+- [x] Submit proofs on-chain from the frontend.
 - [x] Load quiz questions from Supabase for active session.
 - [ ] Add observability and audit logging.
 - [ ] Deploy contract to KRNL Testnet.
