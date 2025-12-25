@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { usePrivy } from '@privy-io/react-auth'
 import { useKRNL } from '@krnl-dev/sdk-react-7702'
 import { parseAbi, encodeFunctionData } from 'viem'
+import { parseAbi, encodeFunctionData } from 'viem'
 import './App.css'
 import { isKrnlConfigured } from './krnlConfig'
 import { supabase } from './supabaseClient'
@@ -50,7 +51,8 @@ function App() {
   const [error, setError] = useState('')
   const isReady = isKrnlConfigured
   const { ready, authenticated, login, logout, user } = usePrivy()
-  const { isAuthorized, enableSmartAccount, executeWorkflowFromTemplate } = useKRNL()
+  const { isAuthorized, enableSmartAccount, executeWorkflowFromTemplate, embeddedWallet } =
+    useKRNL()
 
   const sessionLink = useMemo(() => {
     if (!session) return ''
@@ -117,11 +119,17 @@ function App() {
 
     if (!authenticated) {
       setError('Connect your wallet to create a lobby.')
+      login()
       return
     }
 
     if (!walletAddress) {
       setError('No wallet address found in session.')
+      return
+    }
+
+    if (!embeddedWallet) {
+      setError('Wallet not connected to KRNL. Try reconnecting.')
       return
     }
 
@@ -158,34 +166,34 @@ function App() {
       }
     }
 
-    if (executeWorkflowFromTemplate) {
-      const template = {
-        action: 'quiz_fetch',
-        params: {
-          sessionId: '{{SESSION_ID}}',
-          count: '{{COUNT}}',
-          category: '{{CATEGORY}}',
-          difficulty: '{{DIFFICULTY}}',
-          type: '{{TYPE}}',
-        },
-      }
-      const params = {
-        '{{SESSION_ID}}': id,
-        '{{COUNT}}': String(draft.count),
-        '{{CATEGORY}}': String(draft.category),
-        '{{DIFFICULTY}}': draft.difficulty,
-        '{{TYPE}}': draft.type,
-      }
-      try {
-        await executeWorkflowFromTemplate(template, params)
-    } catch (err) {
-      console.error('KRNL quiz_fetch failed', err)
-      setError(`KRNL workflow failed to start: ${String(err)}`)
+    if (!executeWorkflowFromTemplate) {
+      setError('KRNL workflow executor is unavailable.')
       setIsCreating(false)
       return
     }
-    } else {
-      setError('KRNL workflow executor is unavailable.')
+
+    const template = {
+      action: 'quiz_fetch',
+      params: {
+        sessionId: '{{SESSION_ID}}',
+        count: '{{COUNT}}',
+        category: '{{CATEGORY}}',
+        difficulty: '{{DIFFICULTY}}',
+        type: '{{TYPE}}',
+      },
+    }
+    const params = {
+      '{{SESSION_ID}}': id,
+      '{{COUNT}}': String(draft.count),
+      '{{CATEGORY}}': String(draft.category),
+      '{{DIFFICULTY}}': draft.difficulty,
+      '{{TYPE}}': draft.type,
+    }
+    try {
+      await executeWorkflowFromTemplate(template, params)
+    } catch (err) {
+      console.error('KRNL quiz_fetch failed', err)
+      setError(`KRNL workflow failed to start: ${String(err)}`)
       setIsCreating(false)
       return
     }
@@ -230,7 +238,7 @@ function App() {
     }
 
     loadQuestions()
-  }, [session])
+  }, [session, supabase])
 
   const currentQuestion = questions[currentIndex]
 
@@ -397,7 +405,11 @@ function App() {
             </select>
           </label>
         </div>
-        <button className="primary" onClick={createSession}>
+        <button
+          className="primary"
+          onClick={createSession}
+          disabled={!authenticated || isCreating}
+        >
           {isCreating ? 'Creating...' : 'Create lobby'}
         </button>
         {error && <p className="error">{error}</p>}
