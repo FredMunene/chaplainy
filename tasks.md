@@ -30,5 +30,6 @@
 - [x] Load quiz questions from Supabase for active session.
 - [ ] Add observability and audit logging.
 - [ ] Deploy contract to KRNL Testnet.
+- [x] Deploy contract to KRNL Testnet.
 - [ ] Deploy workflows to KRNL node.
 - [ ] Deploy frontend and run full MVP test.
