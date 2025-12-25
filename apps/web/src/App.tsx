@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { usePrivy } from '@privy-io/react-auth'
 import { useKRNL } from '@krnl-dev/sdk-react-7702'
 import { parseAbi, encodeFunctionData } from 'viem'
-import { parseAbi, encodeFunctionData } from 'viem'
 import './App.css'
 import { isKrnlConfigured } from './krnlConfig'
 import { supabase } from './supabaseClient'
@@ -129,7 +128,9 @@ function App() {
     }
 
     if (!embeddedWallet) {
-      setError('Wallet not connected to KRNL. Try reconnecting.')
+      setError(
+        'KRNL needs a Privy embedded wallet. Disconnect and reconnect using Privy, then try again.',
+      )
       return
     }
 
@@ -331,6 +332,7 @@ function App() {
           {authenticated ? (
             <>
               <span className="wallet">{walletAddress || 'Wallet connected'}</span>
+              {!embeddedWallet && <span className="status">KRNL wallet not ready</span>}
               <button className="ghost" onClick={logout}>
                 Disconnect
               </button>
