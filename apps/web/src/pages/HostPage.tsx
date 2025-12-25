@@ -3,7 +3,8 @@ import { usePrivy } from '@privy-io/react-auth'
 import { useKRNL } from '@krnl-dev/sdk-react-7702'
 import { supabase } from '../supabaseClient'
 import PageHeader from '../components/PageHeader'
-import { CreatedSession, SessionDraft, defaultDraft } from '../types'
+import type { CreatedSession, SessionDraft } from '../types'
+import { defaultDraft } from '../types'
 
 export default function HostPage() {
   const [draft, setDraft] = useState<SessionDraft>(defaultDraft)
