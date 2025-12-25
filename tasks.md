@@ -27,6 +27,7 @@
 - [x] Build quiz gameplay UI.
 - [x] Wire answer submission to KRNL quiz_verify and contract payload.
 - [ ] Build leaderboard view with on-chain events.
+- [ ] Submit proofs on-chain from the frontend.
 - [x] Load quiz questions from Supabase for active session.
 - [ ] Add observability and audit logging.
 - [ ] Deploy contract to KRNL Testnet.
