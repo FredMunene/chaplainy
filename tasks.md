@@ -28,6 +28,7 @@
 - [x] Wire answer submission to KRNL quiz_verify and contract payload.
 - [ ] Build leaderboard view with on-chain events.
 - [x] Show leaderboard from Supabase scores.
+- [x] Support session links by loading session from Supabase.
 - [ ] Submit proofs on-chain from the frontend.
 - [x] Load quiz questions from Supabase for active session.
 - [ ] Add observability and audit logging.
