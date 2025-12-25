@@ -226,9 +226,14 @@ export default function SessionPage() {
     }
 
     const provider = await privyWallet.getEthereumProvider()
+    const eip1193Provider = {
+      ...provider,
+      on: provider.on ?? (() => {}),
+      removeListener: provider.removeListener ?? (() => {}),
+    }
     const walletClient = createWalletClient({
       chain: baseSepolia,
-      transport: custom(provider),
+      transport: custom(eip1193Provider),
       account: walletAddress as `0x${string}`,
     })
 
