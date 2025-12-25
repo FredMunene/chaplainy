@@ -1,5 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { BrowserRouter } from 'react-router-dom'
 import { PrivyProvider } from '@privy-io/react-auth'
 import { KRNLProvider } from '@krnl-dev/sdk-react-7702'
 import './index.css'
@@ -19,7 +20,9 @@ if (!isKrnlConfigured || !krnlConfig || !privyAppId) {
 const app = (
   <PrivyProvider appId={privyAppId}>
     <KRNLProvider config={krnlConfig}>
-      <App />
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
     </KRNLProvider>
   </PrivyProvider>
 )
