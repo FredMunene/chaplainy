@@ -247,7 +247,7 @@ function App() {
     const abi = parseAbi([
       'function submitProof((bytes32 sessionId,address player,bytes32 questionId,uint256 scoreDelta,uint256 nonce,uint256 expiry,bytes32 proofHash,bytes signature) attestation)',
     ])
-    void encodeFunctionData({
+    const callData = encodeFunctionData({
       abi,
       functionName: 'submitProof',
       args: [attestation],
@@ -260,6 +260,9 @@ function App() {
       answer_choice: selectedAnswer,
       proof_hash: attestation?.proofHash ?? null,
     })
+
+    // TODO: Submit the transaction via KRNL SDK once contract submission helper is available.
+    void callData
 
     setSelectedAnswer('')
     setCurrentIndex((prev) => Math.min(prev + 1, questions.length))
