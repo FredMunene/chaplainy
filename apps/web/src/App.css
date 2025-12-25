@@ -63,6 +63,14 @@
   background: #eef2ff;
 }
 
+.status {
+  font-size: 0.8rem;
+  color: #b45309;
+  background: #fef3c7;
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+}
+
 .panel {
   background: #ffffff;
   border-radius: 16px;
