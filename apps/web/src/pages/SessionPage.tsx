@@ -5,7 +5,8 @@ import { parseAbi, encodeFunctionData } from 'viem'
 import { useParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import PageHeader from '../components/PageHeader'
-import { CreatedSession, QuizQuestion, LeaderboardEntry, defaultDraft } from '../types'
+import type { CreatedSession, QuizQuestion, LeaderboardEntry } from '../types'
+import { defaultDraft } from '../types'
 
 export default function SessionPage() {
   const { id } = useParams()
