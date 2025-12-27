@@ -13,7 +13,7 @@
   "rpc_url": "${_SECRETS.rpcSepoliaURL}",
   "target": {
     "contract": "${ENV.QUIZ_SCA_ADDRESS}",
-    "function": "submitProof((bytes32,address,bytes32,uint256,uint256,uint256,bytes32,bytes))",
+    "function": "submitProofWithAuth((uint256,uint256,bytes32,(bytes32,bytes,bytes)[],bytes,bool,bytes))",
     "authData_result": "${encode-proof.result}",
     "parameters": []
   },
@@ -74,20 +74,19 @@
         "config": {},
         "inputs": {
           "value": {
-            "sessionId": "{{INPUT.sessionId}}",
-            "player": "{{INPUT.player}}",
-            "questionId": "{{INPUT.questionId}}",
-            "correct": "${verify-answer.correct}",
-            "scoreDelta": "${verify-answer.correct}",
-            "nonce": "{{INPUT.sessionNonce}}",
-            "expiry": "${ENV.ATTESTATION_EXPIRY}",
-            "proofHash": "${load-question.row.correct_hash}"
+            "payload": {
+              "sessionId": "{{INPUT.sessionId}}",
+              "player": "{{INPUT.player}}",
+              "questionId": "{{INPUT.questionId}}",
+              "scoreDelta": "${verify-answer.correct}",
+              "proofHash": "${load-question.row.correct_hash}"
+            }
           }
         },
         "outputs": [
           {
-            "name": "attestation",
-            "value": "result.attestation",
+            "name": "payload",
+            "value": "result.payload",
             "export": true
           }
         ]
@@ -101,24 +100,21 @@
         "config": {
           "parameters": [
             {
-              "name": "att",
+              "name": "payload",
               "type": "tuple",
               "components": [
                 { "name": "sessionId", "type": "bytes32" },
                 { "name": "player", "type": "address" },
                 { "name": "questionId", "type": "bytes32" },
                 { "name": "scoreDelta", "type": "uint256" },
-                { "name": "nonce", "type": "uint256" },
-                { "name": "expiry", "type": "uint256" },
-                { "name": "proofHash", "type": "bytes32" },
-                { "name": "signature", "type": "bytes" }
+                { "name": "proofHash", "type": "bytes32" }
               ]
             }
           ]
         },
         "inputs": {
           "value": {
-            "att": "${compute-score.attestation}"
+            "payload": "${compute-score.payload}"
           }
         },
         "outputs": [
@@ -148,7 +144,7 @@
             "player_wallet": "{{INPUT.player}}",
             "question_id": "{{INPUT.questionId}}",
             "answer_choice": "{{INPUT.answer}}",
-            "proof_hash": "${compute-score.attestation.proofHash}"
+            "proof_hash": "${compute-score.payload.proofHash}"
           }
         },
         "outputs": [
