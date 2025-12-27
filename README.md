@@ -33,7 +33,7 @@ Chaplain is a KRNL-powered quiz experience that brings Kahoot-style play to the 
 - [ ] Ship docs + demo; open source under MIT/Apache-2.0.
 
 ## Current progress
-- Contract deployed: `QuizSCA` on Sepolia at `0x0342768dAE202cB0419111D4d5B7fF48Ca1047c4`
+- Contract deployed: `QuizSCA` on Sepolia at `0x63cBcf35ea22FC674A23D453628398c60E1D05D5`
 - Frontend routes: `/` (host), `/session/:id` (player session)
 - Supabase integration: sessions, questions, submissions, scores
 - KRNL workflow calls: `quiz_fetch` (host) and `quiz_verify` (session) wired in UI
