@@ -13,6 +13,30 @@ contract QuizSCA is Ownable {
     using ECDSA for bytes32;
     using MessageHashUtils for bytes32;
 
+    struct Execution {
+        bytes32 id;
+        bytes request;
+        bytes response;
+    }
+
+    struct AuthData {
+        uint256 nonce;
+        uint256 expiry;
+        bytes32 id;
+        Execution[] executions;
+        bytes result;
+        bool sponsorExecutionFee;
+        bytes signature;
+    }
+
+    struct ProofPayload {
+        bytes32 sessionId;
+        address player;
+        bytes32 questionId;
+        uint256 scoreDelta;
+        bytes32 proofHash;
+    }
+
     struct Attestation {
         bytes32 sessionId;
         address player;
@@ -29,6 +53,8 @@ contract QuizSCA is Ownable {
     mapping(bytes32 => mapping(address => uint256)) public scores;
     mapping(bytes32 => mapping(address => uint256)) public nonces;
     mapping(bytes32 => mapping(address => mapping(bytes32 => bool))) public answered;
+    mapping(address => uint256) public authNonces;
+    mapping(bytes32 => bool) public usedAuthorizations;
 
     event AttestorUpdated(address indexed previousAttestor, address indexed newAttestor);
     event ScoreUpdated(
@@ -45,6 +71,8 @@ contract QuizSCA is Ownable {
     error InvalidNonce();
     error QuestionAlreadyAnswered();
     error InvalidSignature();
+    error AuthorizationExpired();
+    error AuthorizationAlreadyUsed();
 
     constructor(address initialAttestor) Ownable(msg.sender) {
         if (initialAttestor == address(0)) {
@@ -96,6 +124,27 @@ contract QuizSCA is Ownable {
         );
     }
 
+    function submitProofWithAuth(AuthData calldata authData) external {
+        _verifyAuthorization(authData);
+
+        ProofPayload memory payload = abi.decode(authData.result, (ProofPayload));
+        if (answered[payload.sessionId][payload.player][payload.questionId]) {
+            revert QuestionAlreadyAnswered();
+        }
+
+        answered[payload.sessionId][payload.player][payload.questionId] = true;
+        scores[payload.sessionId][payload.player] += payload.scoreDelta;
+
+        emit ScoreUpdated(
+            payload.sessionId,
+            payload.player,
+            scores[payload.sessionId][payload.player],
+            payload.proofHash,
+            payload.questionId,
+            payload.scoreDelta
+        );
+    }
+
     function _hashAttestation(Attestation calldata attestation) internal view returns (bytes32) {
         return keccak256(
             abi.encodePacked(
@@ -110,5 +159,39 @@ contract QuizSCA is Ownable {
                 block.chainid
             )
         );
+    }
+
+    function _verifyAuthorization(AuthData calldata authData) internal {
+        if (authData.nonce != authNonces[msg.sender]) {
+            revert InvalidNonce();
+        }
+        if (block.timestamp > authData.expiry) {
+            revert AuthorizationExpired();
+        }
+
+        bytes32 authHash = keccak256(
+            abi.encodePacked(
+                msg.sender,
+                authData.nonce,
+                authData.expiry,
+                authData.id,
+                keccak256(abi.encode(authData.executions)),
+                authData.result,
+                authData.sponsorExecutionFee,
+                msg.sig
+            )
+        );
+
+        if (usedAuthorizations[authHash]) {
+            revert AuthorizationAlreadyUsed();
+        }
+
+        address signer = authHash.toEthSignedMessageHash().recover(authData.signature);
+        if (signer != attestor) {
+            revert InvalidSignature();
+        }
+
+        authNonces[msg.sender] += 1;
+        usedAuthorizations[authHash] = true;
     }
 }
