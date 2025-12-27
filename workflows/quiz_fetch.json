@@ -1,59 +1,107 @@
 {
-  "name": "quiz_fetch",
-  "version": "0.1.0",
-  "description": "Fetch trivia questions, hash correct answers, and cache to Supabase.",
-  "inputs": {
-    "sessionId": "{{INPUT.sessionId}}",
-    "count": "{{INPUT.count}}",
-    "category": "{{INPUT.category}}",
-    "difficulty": "{{INPUT.difficulty}}",
-    "type": "{{INPUT.type}}"
-  },
   "chain_id": "{{ENV.CHAIN_ID}}",
   "sender": "{{ENV.SENDER_ADDRESS}}",
   "delegate": "{{ENV.DELEGATE_ADDRESS}}",
-  "attestor": "{{ENV.ATTESTOR_CONFIG}}",
-  "rpc_url": "{{ENV.RPC_URL}}",
+  "attestor": "{{ENV.ATTESTOR_IMAGE}}",
   "sponsor_execution_fee": true,
   "value": "0",
   "intent": {
-    "id": "{{INTENT_ID}}",
-    "signature": "{{INTENT_SIGNATURE}}",
-    "deadline": "{{INTENT_DEADLINE}}"
+    "id": "{{TRANSACTION_INTENT_ID}}",
+    "signature": "{{USER_SIGNATURE}}",
+    "deadline": "{{TRANSACTION_INTENT_DEADLINE}}"
   },
-  "steps": [
-    {
-      "id": "fetch_trivia",
-      "type": "http",
-      "method": "GET",
-      "url": "https://opentdb.com/api.php?amount={{INPUT.count}}&category={{INPUT.category}}&difficulty={{INPUT.difficulty}}&type={{INPUT.type}}",
-      "result": "trivia_response"
-    },
-    {
-      "id": "normalize_questions",
-      "type": "transform",
-      "input": "{{steps.fetch_trivia.result}}",
-      "result": "normalized_questions"
-    },
-    {
-      "id": "hash_correct_answers",
-      "type": "hash",
-      "input": "{{steps.normalize_questions.result}}",
-      "result": "questions_with_hashes"
-    },
-    {
-      "id": "store_questions",
-      "type": "supabase_insert",
-      "table": "questions",
-      "input": {
-        "session_id": "{{INPUT.sessionId}}",
-        "rows": "{{steps.hash_correct_answers.result}}"
+  "rpc_url": "${_SECRETS.rpcBaseSepoliaURL}",
+  "workflow": {
+    "name": "quiz_fetch",
+    "version": "1.0.0",
+    "steps": [
+      {
+        "name": "fetch-trivia",
+        "type": "HTTP",
+        "image": "${ENV.HTTP_EXECUTOR_IMAGE}",
+        "attestor": "${ENV.ATTESTOR_IMAGE}",
+        "next": "normalize-trivia",
+        "config": {},
+        "inputs": {
+          "url": "https://opentdb.com/api.php?amount={{INPUT.count}}&category={{INPUT.category}}&difficulty={{INPUT.difficulty}}&type={{INPUT.type}}",
+          "method": "GET"
+        },
+        "outputs": [
+          {
+            "name": "payload",
+            "value": "response.body",
+            "export": true
+          }
+        ]
       },
-      "result": "stored_questions"
-    }
-  ],
-  "output": {
-    "questions": "{{steps.normalize_questions.result}}",
-    "sessionNonce": "{{ENV.SESSION_NONCE}}"
+      {
+        "name": "normalize-trivia",
+        "type": "TRANSFORM",
+        "image": "${ENV.TRANSFORM_EXECUTOR_IMAGE}",
+        "attestor": "${ENV.ATTESTOR_IMAGE}",
+        "next": "hash-answers",
+        "config": {},
+        "inputs": {
+          "value": {
+            "sessionId": "{{INPUT.sessionId}}",
+            "raw": "${fetch-trivia.payload}"
+          }
+        },
+        "outputs": [
+          {
+            "name": "questions",
+            "value": "result.questions",
+            "export": true
+          },
+          {
+            "name": "hashed",
+            "value": "result.hashed",
+            "export": true
+          }
+        ]
+      },
+      {
+        "name": "hash-answers",
+        "type": "HASH",
+        "image": "${ENV.HASH_EXECUTOR_IMAGE}",
+        "attestor": "${ENV.ATTESTOR_IMAGE}",
+        "next": "store-questions",
+        "config": {},
+        "inputs": {
+          "value": "${normalize-trivia.hashed}"
+        },
+        "outputs": [
+          {
+            "name": "rows",
+            "value": "result.rows",
+            "export": true
+          }
+        ]
+      },
+      {
+        "name": "store-questions",
+        "type": "HTTP",
+        "image": "${ENV.HTTP_EXECUTOR_IMAGE}",
+        "attestor": "${ENV.ATTESTOR_IMAGE}",
+        "config": {},
+        "inputs": {
+          "url": "${_SECRETS.supabaseRestUrl}/questions",
+          "method": "POST",
+          "headers": {
+            "Content-Type": "application/json",
+            "apikey": "${_SECRETS.supabaseServiceKey}",
+            "Authorization": "Bearer ${_SECRETS.supabaseServiceKey}"
+          },
+          "body": "${hash-answers.rows}"
+        },
+        "outputs": [
+          {
+            "name": "stored",
+            "value": "response.body",
+            "export": true
+          }
+        ]
+      }
+    ]
   }
 }
