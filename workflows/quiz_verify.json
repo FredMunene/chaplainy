@@ -1,81 +1,164 @@
 {
-  "name": "quiz_verify",
-  "version": "0.1.0",
-  "description": "Verify a player's answer, compute score, and return an attestation.",
-  "inputs": {
-    "sessionId": "{{INPUT.sessionId}}",
-    "questionId": "{{INPUT.questionId}}",
-    "answer": "{{INPUT.answer}}",
-    "sessionNonce": "{{INPUT.sessionNonce}}",
-    "player": "{{INPUT.player}}"
-  },
   "chain_id": "{{ENV.CHAIN_ID}}",
   "sender": "{{ENV.SENDER_ADDRESS}}",
   "delegate": "{{ENV.DELEGATE_ADDRESS}}",
-  "attestor": "{{ENV.ATTESTOR_CONFIG}}",
-  "rpc_url": "{{ENV.RPC_URL}}",
+  "attestor": "{{ENV.ATTESTOR_IMAGE}}",
   "sponsor_execution_fee": true,
   "value": "0",
   "intent": {
-    "id": "{{INTENT_ID}}",
-    "signature": "{{INTENT_SIGNATURE}}",
-    "deadline": "{{INTENT_DEADLINE}}"
+    "id": "{{TRANSACTION_INTENT_ID}}",
+    "signature": "{{USER_SIGNATURE}}",
+    "deadline": "{{TRANSACTION_INTENT_DEADLINE}}"
   },
-  "steps": [
-    {
-      "id": "load_question",
-      "type": "supabase_select",
-      "table": "questions",
-      "filter": {
-        "id": "{{INPUT.questionId}}"
+  "rpc_url": "${_SECRETS.rpcBaseSepoliaURL}",
+  "target": {
+    "contract": "${ENV.QUIZ_SCA_ADDRESS}",
+    "function": "submitProof((bytes32,address,bytes32,uint256,uint256,uint256,bytes32,bytes))",
+    "authData_result": "${encode-proof.result}",
+    "parameters": []
+  },
+  "workflow": {
+    "name": "quiz_verify",
+    "version": "1.0.0",
+    "steps": [
+      {
+        "name": "load-question",
+        "type": "HTTP",
+        "image": "${ENV.HTTP_EXECUTOR_IMAGE}",
+        "attestor": "${ENV.ATTESTOR_IMAGE}",
+        "next": "verify-answer",
+        "config": {},
+        "inputs": {
+          "url": "${_SECRETS.supabaseRestUrl}/questions?id=eq.{{INPUT.questionId}}",
+          "method": "GET",
+          "headers": {
+            "apikey": "${_SECRETS.supabaseServiceKey}",
+            "Authorization": "Bearer ${_SECRETS.supabaseServiceKey}"
+          }
+        },
+        "outputs": [
+          {
+            "name": "row",
+            "value": "response.body.0",
+            "export": true
+          }
+        ]
       },
-      "result": "question_record"
-    },
-    {
-      "id": "verify_answer",
-      "type": "hash_compare",
-      "input": {
-        "answer": "{{INPUT.answer}}",
-        "correct_hash": "{{steps.load_question.result.correct_hash}}"
+      {
+        "name": "verify-answer",
+        "type": "HASH_COMPARE",
+        "image": "${ENV.HASH_EXECUTOR_IMAGE}",
+        "attestor": "${ENV.ATTESTOR_IMAGE}",
+        "next": "compute-score",
+        "config": {},
+        "inputs": {
+          "value": {
+            "answer": "{{INPUT.answer}}",
+            "correctHash": "${load-question.row.correct_hash}"
+          }
+        },
+        "outputs": [
+          {
+            "name": "correct",
+            "value": "result.correct",
+            "export": true
+          }
+        ]
       },
-      "result": "verification_result"
-    },
-    {
-      "id": "compute_score",
-      "type": "transform",
-      "input": "{{steps.verify_answer.result}}",
-      "result": "score_delta"
-    },
-    {
-      "id": "sign_attestation",
-      "type": "attest",
-      "input": {
-        "sessionId": "{{INPUT.sessionId}}",
-        "player": "{{INPUT.player}}",
-        "questionId": "{{INPUT.questionId}}",
-        "correct": "{{steps.verify_answer.result.correct}}",
-        "scoreDelta": "{{steps.compute_score.result}}",
-        "nonce": "{{INPUT.sessionNonce}}",
-        "expiry": "{{ENV.ATTESTATION_EXPIRY}}"
+      {
+        "name": "compute-score",
+        "type": "TRANSFORM",
+        "image": "${ENV.TRANSFORM_EXECUTOR_IMAGE}",
+        "attestor": "${ENV.ATTESTOR_IMAGE}",
+        "next": "encode-proof",
+        "config": {},
+        "inputs": {
+          "value": {
+            "sessionId": "{{INPUT.sessionId}}",
+            "player": "{{INPUT.player}}",
+            "questionId": "{{INPUT.questionId}}",
+            "correct": "${verify-answer.correct}",
+            "scoreDelta": "${verify-answer.correct}",
+            "nonce": "{{INPUT.sessionNonce}}",
+            "expiry": "${ENV.ATTESTATION_EXPIRY}",
+            "proofHash": "${load-question.row.correct_hash}"
+          }
+        },
+        "outputs": [
+          {
+            "name": "attestation",
+            "value": "result.attestation",
+            "export": true
+          }
+        ]
       },
-      "result": "attestation"
-    },
-    {
-      "id": "store_submission",
-      "type": "supabase_insert",
-      "table": "submissions",
-      "input": {
-        "session_id": "{{INPUT.sessionId}}",
-        "player_wallet": "{{INPUT.player}}",
-        "question_id": "{{INPUT.questionId}}",
-        "answer_choice": "{{INPUT.answer}}",
-        "proof_hash": "{{steps.sign_attestation.result.proofHash}}",
-        "workflow_run_id": "{{ENV.WORKFLOW_RUN_ID}}"
+      {
+        "name": "encode-proof",
+        "type": "EVM_ENCODER",
+        "image": "${ENV.ENCODER_EXECUTOR_IMAGE}",
+        "attestor": "${ENV.ATTESTOR_IMAGE}",
+        "next": "store-submission",
+        "config": {
+          "parameters": [
+            {
+              "name": "att",
+              "type": "tuple",
+              "components": [
+                { "name": "sessionId", "type": "bytes32" },
+                { "name": "player", "type": "address" },
+                { "name": "questionId", "type": "bytes32" },
+                { "name": "scoreDelta", "type": "uint256" },
+                { "name": "nonce", "type": "uint256" },
+                { "name": "expiry", "type": "uint256" },
+                { "name": "proofHash", "type": "bytes32" },
+                { "name": "signature", "type": "bytes" }
+              ]
+            }
+          ]
+        },
+        "inputs": {
+          "value": {
+            "att": "${compute-score.attestation}"
+          }
+        },
+        "outputs": [
+          {
+            "name": "result",
+            "value": "result",
+            "export": true
+          }
+        ]
       },
-      "result": "submission_record"
-    }
-  ],
-  "output": {
-    "attestation": "{{steps.sign_attestation.result}}"
+      {
+        "name": "store-submission",
+        "type": "HTTP",
+        "image": "${ENV.HTTP_EXECUTOR_IMAGE}",
+        "attestor": "${ENV.ATTESTOR_IMAGE}",
+        "config": {},
+        "inputs": {
+          "url": "${_SECRETS.supabaseRestUrl}/submissions",
+          "method": "POST",
+          "headers": {
+            "Content-Type": "application/json",
+            "apikey": "${_SECRETS.supabaseServiceKey}",
+            "Authorization": "Bearer ${_SECRETS.supabaseServiceKey}"
+          },
+          "body": {
+            "session_id": "{{INPUT.sessionId}}",
+            "player_wallet": "{{INPUT.player}}",
+            "question_id": "{{INPUT.questionId}}",
+            "answer_choice": "{{INPUT.answer}}",
+            "proof_hash": "${compute-score.attestation.proofHash}"
+          }
+        },
+        "outputs": [
+          {
+            "name": "stored",
+            "value": "response.body",
+            "export": true
+          }
+        ]
+      }
+    ]
   }
 }
