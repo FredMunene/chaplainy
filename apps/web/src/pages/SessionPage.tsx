@@ -37,24 +37,29 @@ export default function SessionPage() {
 
   useEffect(() => {
     if (!supabase || !sessionId) return
+    const client = supabase
 
     const loadSession = async () => {
-      const { data, error: fetchError } = await supabase
+      console.log('Loading session', sessionId)
+      const { data, error: fetchError } = await client
         .from('sessions')
         .select('id,title,created_at')
         .eq('id', sessionId)
         .single()
 
       if (fetchError) {
+        console.error('Session load failed', fetchError)
         setError(fetchError.message)
         return
       }
 
       if (!data) {
+        console.warn('Session not found', sessionId)
         setError('Session not found.')
         return
       }
 
+      console.log('Session loaded', data.id)
       setSession({
         ...defaultDraft,
         title: data.title,
@@ -68,30 +73,49 @@ export default function SessionPage() {
 
   useEffect(() => {
     if (!supabase || !session) return
+    const client = supabase
 
     const loadQuestions = async () => {
-      const { data, error: fetchError } = await supabase
+      console.log('Loading questions for session', session.id)
+      const { data, error: fetchError } = await client
         .from('questions')
         .select('id, question, choices')
         .eq('session_id', session.id)
         .order('index_in_session', { ascending: true })
 
       if (fetchError) {
+        console.error('Question load failed', fetchError)
         setError(fetchError.message)
         return
       }
 
       if (!data || data.length === 0) {
+        console.warn('No questions found', session.id)
         setQuestions([])
         setCurrentIndex(0)
         return
       }
 
-      const mapped = data.map((row) => ({
-        id: row.id as string,
-        prompt: row.question as string,
-        choices: Array.isArray(row.choices) ? row.choices : [],
-      }))
+      const mapped = data.map((row) => {
+        let choices: string[] = []
+        if (Array.isArray(row.choices)) {
+          choices = row.choices as string[]
+        } else if (typeof row.choices === 'string') {
+          try {
+            const parsed = JSON.parse(row.choices)
+            choices = Array.isArray(parsed) ? parsed : []
+          } catch {
+            choices = []
+          }
+        }
+
+        return {
+          id: row.id as string,
+          prompt: row.question as string,
+          choices,
+        }
+      })
+      console.log('Questions loaded', mapped.length)
       setQuestions(mapped)
       setCurrentIndex(0)
       setSelectedAnswer('')
@@ -102,22 +126,26 @@ export default function SessionPage() {
 
   useEffect(() => {
     if (!supabase || !session) return
+    const client = supabase
 
     let isMounted = true
 
     const loadLeaderboard = async () => {
-      const { data, error: fetchError } = await supabase
+      console.log('Loading leaderboard', session.id)
+      const { data, error: fetchError } = await client
         .from('scores')
         .select('player_wallet,total_score,updated_at')
         .eq('session_id', session.id)
         .order('total_score', { ascending: false })
 
       if (fetchError) {
+        console.error('Leaderboard load failed', fetchError)
         setError(fetchError.message)
         return
       }
 
       if (!isMounted) return
+      console.log('Leaderboard loaded', (data ?? []).length)
       setLeaderboard((data ?? []) as LeaderboardEntry[])
     }
 
@@ -134,8 +162,9 @@ export default function SessionPage() {
 
   const refreshQuestions = async () => {
     if (!supabase || !session) return
+    const client = supabase
     setIsRefreshing(true)
-    const { data, error: fetchError } = await supabase
+    const { data, error: fetchError } = await client
       .from('questions')
       .select('id, question, choices')
       .eq('session_id', session.id)
@@ -147,11 +176,25 @@ export default function SessionPage() {
       return
     }
 
-    const mapped = (data ?? []).map((row) => ({
-      id: row.id as string,
-      prompt: row.question as string,
-      choices: Array.isArray(row.choices) ? row.choices : [],
-    }))
+    const mapped = (data ?? []).map((row) => {
+      let choices: string[] = []
+      if (Array.isArray(row.choices)) {
+        choices = row.choices as string[]
+      } else if (typeof row.choices === 'string') {
+        try {
+          const parsed = JSON.parse(row.choices)
+          choices = Array.isArray(parsed) ? parsed : []
+        } catch {
+          choices = []
+        }
+      }
+
+      return {
+        id: row.id as string,
+        prompt: row.question as string,
+        choices,
+      }
+    })
     setQuestions(mapped)
     setCurrentIndex(0)
     setSelectedAnswer('')
@@ -280,9 +323,9 @@ export default function SessionPage() {
             </div>
             <h3>{currentQuestion.prompt}</h3>
             <div className="choices">
-              {currentQuestion.choices.map((choice) => (
+              {currentQuestion.choices.map((choice, index) => (
                 <button
-                  key={choice}
+                  key={`${currentQuestion.id}-${index}`}
                   className={selectedAnswer === choice ? 'choice active' : 'choice'}
                   onClick={() => setSelectedAnswer(choice)}
                 >
