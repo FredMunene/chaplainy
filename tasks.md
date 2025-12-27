@@ -15,7 +15,6 @@
 - [x] Initialize contracts project (KRNL CLI/Foundry).
 
 - [x] Create Supabase project and apply schema.
-- [ ] Implement `quiz_fetch` workflow and connect to trivia API.
 - [x] Implement `quiz_fetch` workflow and connect to trivia API.
 - [x] Implement `quiz_verify` workflow and attestation signing.
 - [x] Build `QuizSCA.sol` with attestation verification and replay protection.
@@ -34,7 +33,7 @@
 - [x] Submit proofs on-chain from the frontend.
 - [x] Load quiz questions from Supabase for active session.
 - [ ] Add observability and audit logging.
-- [ ] Deploy contract to KRNL Testnet.
-- [x] Deploy contract to KRNL Testnet.
+- [x] Deploy attestor image for KRNL workflows.
+- [ ] Configure workflows in KRNL Studio (quiz_fetch, quiz_verify).
 - [ ] Deploy workflows to KRNL node.
 - [ ] Deploy frontend and run full MVP test.
