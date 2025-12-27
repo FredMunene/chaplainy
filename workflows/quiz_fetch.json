@@ -10,7 +10,7 @@
     "signature": "{{USER_SIGNATURE}}",
     "deadline": "{{TRANSACTION_INTENT_DEADLINE}}"
   },
-  "rpc_url": "${_SECRETS.rpcBaseSepoliaURL}",
+  "rpc_url": "${_SECRETS.rpcSepoliaURL}",
   "workflow": {
     "name": "quiz_fetch",
     "version": "1.0.0",
