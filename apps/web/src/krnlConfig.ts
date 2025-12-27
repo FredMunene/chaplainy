@@ -13,8 +13,8 @@ export const isKrnlConfigured = Boolean(
 export const krnlConfig = isKrnlConfigured
   ? createConfig({
       chain: sepolia,
-      delegatedContractAddress,
-      privyAppId,
-      krnlNodeUrl,
+      delegatedContractAddress: delegatedContractAddress!,
+      privyAppId: privyAppId!,
+      krnlNodeUrl: krnlNodeUrl!,
     })
   : null
