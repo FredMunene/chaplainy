@@ -20,7 +20,7 @@ This folder holds KRNL workflow JSON definitions that follow the official workfl
 - `${ENV.QUIZ_SCA_ADDRESS}` – deployed QuizSCA address.
 - `${_SECRETS.supabaseServiceKey}` – Supabase service role key.
 - `${_SECRETS.supabaseRestUrl}` – Supabase REST base URL.
-- `${_SECRETS.rpcBaseSepoliaURL}` – RPC URL for Base Sepolia.
+- `${_SECRETS.rpcSepoliaURL}` – RPC URL for Sepolia.
 
 ## Trivia API pattern
 `https://opentdb.com/api.php?amount=10&category=20&difficulty=easy&type=boolean`
