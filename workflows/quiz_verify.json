@@ -10,7 +10,7 @@
     "signature": "{{USER_SIGNATURE}}",
     "deadline": "{{TRANSACTION_INTENT_DEADLINE}}"
   },
-  "rpc_url": "${_SECRETS.rpcBaseSepoliaURL}",
+  "rpc_url": "${_SECRETS.rpcSepoliaURL}",
   "target": {
     "contract": "${ENV.QUIZ_SCA_ADDRESS}",
     "function": "submitProof((bytes32,address,bytes32,uint256,uint256,uint256,bytes32,bytes))",
