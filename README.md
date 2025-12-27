@@ -19,7 +19,7 @@ Chaplain is a KRNL-powered quiz experience that brings Kahoot-style play to the 
 - Workflows: `quiz_fetch.krnl` (pull questions), `quiz_verify.krnl` (check answers, emit attestation), KRNL node + attestor.
 - Smart contracts: Solidity, EIP-7702 smart accounts for gas abstraction, attestation-aware `QuizSCA.sol`.
 - Data: Supabase (Postgres + Row Level Security) for profiles, game sessions, audit events.
-- Infra: Base Sepolia for contracts, hosted Supabase, static hosting (Vercel/Netlify) for the frontend.
+- Infra: Sepolia for contracts, hosted Supabase, static hosting (Vercel/Netlify) for the frontend.
 
 ## Development checklist
 - [x] Stand up Supabase schema (`supabase/schema.sql`) and RLS (`supabase/rls.sql`).
@@ -33,7 +33,7 @@ Chaplain is a KRNL-powered quiz experience that brings Kahoot-style play to the 
 - [ ] Ship docs + demo; open source under MIT/Apache-2.0.
 
 ## Current progress
-- Contract deployed: `QuizSCA` on Base Sepolia at `0xEfdF322A14Be803BaF5400a5f1915Bd9B776144a`
+- Contract deployed: `QuizSCA` on Sepolia at `0x0342768dAE202cB0419111D4d5B7fF48Ca1047c4`
 - Frontend routes: `/` (host), `/session/:id` (player session)
 - Supabase integration: sessions, questions, submissions, scores
 - KRNL workflow calls: `quiz_fetch` (host) and `quiz_verify` (session) wired in UI
