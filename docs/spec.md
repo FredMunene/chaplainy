@@ -40,7 +40,7 @@ Build a Kahoot-like on-chain quiz game that uses KRNL workflows to privately ver
 - Testability: unit tests for contract and workflows; integration tests across workflow + contract; E2E for frontend flows.
 
 ## System design (summary)
-- Frontend (React/Vite) -> calls `quiz_fetch.krnl` to start session and cache questions in Supabase -> players answer -> frontend calls `quiz_verify.krnl` with answer + session nonce -> workflow returns attestation -> frontend submits proof to `QuizSCA.sol` -> contract validates and updates leaderboard -> events push to frontend via provider or Supabase realtime. (Target chain: Base Sepolia)
+- Frontend (React/Vite) -> calls `quiz_fetch.krnl` to start session and cache questions in Supabase -> players answer -> frontend calls `quiz_verify.krnl` with answer + session nonce -> workflow returns attestation -> frontend submits proof to `QuizSCA.sol` -> contract validates and updates leaderboard -> events push to frontend via provider or Supabase realtime. (Target chain: Sepolia)
 
 ## Data model (Supabase, draft)
 ```sql
