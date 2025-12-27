@@ -25,7 +25,7 @@ Chaplain is a KRNL-powered quiz experience that brings Kahoot-style play to the 
 - [x] Stand up Supabase schema (`supabase/schema.sql`) and RLS (`supabase/rls.sql`).
 - [x] Scaffold Vite + React + TypeScript app; add Privy + KRNL SDK and env wiring.
 - [x] Draft `quiz_fetch` and `quiz_verify` workflow templates.
-- [x] Implement `QuizSCA.sol`, tests, and deploy to Base Sepolia.
+- [x] Implement `QuizSCA.sol`, tests, and deploy to Sepolia.
 - [x] Build host/session UI, Supabase-backed session loading, and leaderboard view.
 - [ ] Deploy workflows to KRNL node and verify Supabase writes.
 - [ ] Submit proofs on-chain from the frontend in real workflow runs.
@@ -34,9 +34,11 @@ Chaplain is a KRNL-powered quiz experience that brings Kahoot-style play to the 
 
 ## Current progress
 - Contract deployed: `QuizSCA` on Sepolia at `0x63cBcf35ea22FC674A23D453628398c60E1D05D5`
+- Attestor image built and pushed for KRNL workflow signing
 - Frontend routes: `/` (host), `/session/:id` (player session)
 - Supabase integration: sessions, questions, submissions, scores
 - KRNL workflow calls: `quiz_fetch` (host) and `quiz_verify` (session) wired in UI
+- Workflow setup in KRNL Studio pending
 
 ## Environment (frontend)
 Set values in `apps/web/.env`:
@@ -54,6 +56,7 @@ pnpm install
 pnpm dev
 ```
 Contracts are managed via Foundry. Workflows are deployed via KRNL Studio/CLI; see `docs/architecture.md`.
+Workflow variables and secrets are documented in `workflows/README.md`.
 
 ## Roadmap (weeks align to the proposal)
 - W1–2: Architecture, Supabase schema, contract skeleton, KRNL node setup.
