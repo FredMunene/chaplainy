@@ -6,9 +6,11 @@ import { fileURLToPath } from 'node:url'
 export default defineConfig({
   plugins: [react()],
   resolve: {
-    alias: {
-      '__vite-optional-peer-dep:@solana-program/system:@privy-io/react-auth:false':
-        fileURLToPath(new URL('./src/solanaSystemStub.ts', import.meta.url)),
-    },
+    alias: [
+      {
+        find: /^__vite-optional-peer-dep:@solana-program\/system:@privy-io\/react-auth:false$/,
+        replacement: fileURLToPath(new URL('./src/solanaSystemStub.ts', import.meta.url)),
+      },
+    ],
   },
 })
