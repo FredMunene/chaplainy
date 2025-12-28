@@ -1,16 +1,24 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { fileURLToPath } from 'node:url'
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
-  resolve: {
-    alias: [
-      {
-        find: /^__vite-optional-peer-dep:@solana-program\/system:@privy-io\/react-auth:false$/,
-        replacement: fileURLToPath(new URL('./src/solanaSystemStub.ts', import.meta.url)),
+  plugins: [
+    react(),
+    {
+      name: 'solana-optional-peer-dep-stub',
+      resolveId(id) {
+        if (id === '__vite-optional-peer-dep:@solana-program/system:@privy-io/react-auth:false') {
+          return '\0solana-system-stub'
+        }
+        return null
       },
-    ],
-  },
+      load(id) {
+        if (id === '\0solana-system-stub') {
+          return 'export function getTransferSolInstruction(){throw new Error("Solana support is not configured for this app.")}'
+        }
+        return null
+      },
+    },
+  ],
 })
