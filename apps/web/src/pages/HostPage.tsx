@@ -5,6 +5,7 @@ import { supabase } from '../supabaseClient'
 import PageHeader from '../components/PageHeader'
 import type { CreatedSession, SessionDraft } from '../types'
 import { defaultDraft } from '../types'
+import { createQuizFetchWorkflow } from '../workflows'
 
 export default function HostPage() {
   const [draft, setDraft] = useState<SessionDraft>(defaultDraft)
@@ -90,45 +91,40 @@ export default function HostPage() {
       return
     }
 
-    if (!isAuthorized) {
-      try {
-        await enableSmartAccount()
-      } catch (err) {
-        setError('Failed to authorize KRNL smart account.')
+    // Direct Edge Function call (bypassing KRNL for testing)
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+    console.log('Calling quiz-fetch Edge Function directly...')
+    try {
+      const response = await fetch(`${supabaseUrl}/functions/v1/quiz-fetch`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${supabaseAnonKey}`,
+        },
+        body: JSON.stringify({
+          sessionId: id,
+          count: draft.count,
+          category: draft.category,
+          difficulty: draft.difficulty,
+          type: draft.type,
+        }),
+      })
+
+      const result = await response.json()
+      console.log('quiz-fetch result:', result)
+
+      if (!result.success) {
+        setError(`Failed to fetch questions: ${result.error || 'Unknown error'}`)
         setIsCreating(false)
         return
       }
-    }
 
-    if (!executeWorkflowFromTemplate) {
-      setError('KRNL workflow executor is unavailable.')
-      setIsCreating(false)
-      return
-    }
-
-    const template = {
-      action: 'quiz_fetch',
-      params: {
-        sessionId: '{{SESSION_ID}}',
-        count: '{{COUNT}}',
-        category: '{{CATEGORY}}',
-        difficulty: '{{DIFFICULTY}}',
-        type: '{{TYPE}}',
-      },
-    }
-    const params = {
-      '{{SESSION_ID}}': id,
-      '{{COUNT}}': String(draft.count),
-      '{{CATEGORY}}': String(draft.category),
-      '{{DIFFICULTY}}': draft.difficulty,
-      '{{TYPE}}': draft.type,
-    }
-
-    try {
-      await executeWorkflowFromTemplate(template, params)
+      console.log(`Stored ${result.questionsCount} questions for session ${id}`)
     } catch (err) {
-      console.error('KRNL quiz_fetch failed', err)
-      setError(`KRNL workflow failed to start: ${String(err)}`)
+      console.error('quiz-fetch failed', err)
+      setError(`Failed to fetch questions: ${String(err)}`)
       setIsCreating(false)
       return
     }

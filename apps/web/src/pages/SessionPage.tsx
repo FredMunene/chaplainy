@@ -1,13 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useKRNL } from '@krnl-dev/sdk-react-7702'
-import { usePrivy, useWallets } from '@privy-io/react-auth'
-import { baseSepolia } from 'viem/chains'
-import { parseAbi, encodeFunctionData, createWalletClient, custom } from 'viem'
+import { usePrivy } from '@privy-io/react-auth'
 import { useParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import PageHeader from '../components/PageHeader'
 import type { CreatedSession, QuizQuestion, LeaderboardEntry } from '../types'
 import { defaultDraft } from '../types'
+import { createQuizVerifyWorkflow } from '../workflows'
 
 export default function SessionPage() {
   const { id } = useParams()
@@ -19,9 +18,9 @@ export default function SessionPage() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
   const [error, setError] = useState('')
   const [isRefreshing, setIsRefreshing] = useState(false)
-  const { executeWorkflowFromTemplate, embeddedWallet } = useKRNL()
+  const { executeWorkflowFromTemplate, embeddedWallet, isAuthorized, enableSmartAccount, resetSteps, statusCode, error: krnlError } = useKRNL()
   const { user } = usePrivy()
-  const { wallets } = useWallets()
+  const [isAuthorizing, setIsAuthorizing] = useState(false)
 
   const walletAddress = useMemo(() => {
     const account = user as
@@ -201,6 +200,51 @@ export default function SessionPage() {
     setIsRefreshing(false)
   }
 
+  const handleAuthorize = async () => {
+    if (!enableSmartAccount) {
+      console.log('enableSmartAccount not available')
+      return
+    }
+    console.log('Starting authorization...')
+    console.log('embeddedWallet:', embeddedWallet)
+    console.log('isAuthorized before:', isAuthorized)
+    console.log('statusCode:', statusCode)
+    console.log('krnlError:', krnlError)
+
+    // Check if wallet needs to switch to Sepolia (chainId 11155111)
+    if (embeddedWallet && embeddedWallet.chainId !== 'eip155:11155111') {
+      console.log('Switching wallet to Sepolia...')
+      try {
+        await embeddedWallet.switchChain?.(11155111)
+        console.log('Switched to Sepolia')
+      } catch (switchErr) {
+        console.error('Failed to switch chain:', switchErr)
+        setError('Failed to switch to Sepolia network. Please try again.')
+        return
+      }
+    }
+
+    setIsAuthorizing(true)
+    setError('')
+    try {
+      const success = await enableSmartAccount()
+      console.log('enableSmartAccount result:', success)
+      console.log('isAuthorized after:', isAuthorized)
+      console.log('statusCode after:', statusCode)
+      console.log('krnlError after:', krnlError)
+      if (!success) {
+        const errMsg = krnlError ? `Failed: ${krnlError}` : 'Smart account authorization failed. Check browser console for details.'
+        setError(errMsg)
+      }
+    } catch (err: any) {
+      console.error('Authorization failed', err)
+      const message = err?.message || err?.reason || String(err)
+      setError(`Authorization failed: ${message}`)
+    } finally {
+      setIsAuthorizing(false)
+    }
+  }
+
   const submitAnswer = async () => {
     if (!selectedAnswer) {
       setError('Select an answer before submitting.')
@@ -212,92 +256,40 @@ export default function SessionPage() {
       return
     }
 
-    if (!executeWorkflowFromTemplate) {
-      setError('KRNL workflow executor is unavailable.')
-      return
-    }
+    // Direct Edge Function call (bypassing KRNL for testing)
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-    const template = {
-      action: 'quiz_verify',
-      params: {
-        sessionId: '{{SESSION_ID}}',
-        questionId: '{{QUESTION_ID}}',
-        answer: '{{ANSWER}}',
-        sessionNonce: '{{SESSION_NONCE}}',
-        player: '{{PLAYER}}',
-      },
-    }
-
-    const params = {
-      '{{SESSION_ID}}': session.id,
-      '{{QUESTION_ID}}': currentQuestion.id,
-      '{{ANSWER}}': selectedAnswer,
-      '{{SESSION_NONCE}}': '1',
-      '{{PLAYER}}': walletAddress || '0xPLAYER',
-    }
-
-    let attestation: any
+    console.log('Calling quiz-verify Edge Function directly...')
     try {
-      attestation = await executeWorkflowFromTemplate(template, params)
-    } catch (err) {
-      console.error('KRNL quiz_verify failed', err)
-      setError(`KRNL answer verification failed: ${String(err)}`)
-      return
-    }
-
-    const contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS as string | undefined
-    if (!contractAddress) {
-      setError('Missing VITE_CONTRACT_ADDRESS env var.')
-      return
-    }
-
-    const abi = parseAbi([
-      'function submitProof((bytes32 sessionId,address player,bytes32 questionId,uint256 scoreDelta,uint256 nonce,uint256 expiry,bytes32 proofHash,bytes signature) attestation)',
-    ])
-    const callData = encodeFunctionData({
-      abi,
-      functionName: 'submitProof',
-      args: [attestation],
-    })
-
-    const privyWallet =
-      wallets.find((wallet) => wallet.address?.toLowerCase() === walletAddress.toLowerCase()) ??
-      wallets[0]
-    if (!privyWallet) {
-      setError('No Privy wallet available for on-chain submission.')
-      return
-    }
-
-    const provider = await privyWallet.getEthereumProvider()
-    const eip1193Provider = {
-      ...provider,
-      on: provider.on ?? (() => {}),
-      removeListener: provider.removeListener ?? (() => {}),
-    }
-    const walletClient = createWalletClient({
-      chain: baseSepolia,
-      transport: custom(eip1193Provider),
-      account: walletAddress as `0x${string}`,
-    })
-
-    try {
-      await walletClient.sendTransaction({
-        to: contractAddress as `0x${string}`,
-        data: callData,
+      const response = await fetch(`${supabaseUrl}/functions/v1/quiz-verify`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${supabaseAnonKey}`,
+        },
+        body: JSON.stringify({
+          sessionId: session.id,
+          questionId: currentQuestion.id,
+          answer: selectedAnswer,
+          player: walletAddress || '0xPLAYER',
+        }),
       })
+
+      const result = await response.json()
+      console.log('quiz-verify result:', result)
+
+      if (!result.success) {
+        setError(`Failed to verify answer: ${result.error || 'Unknown error'}`)
+        return
+      }
+
+      console.log(`Answer verified: ${result.isCorrect ? 'Correct!' : 'Wrong'}`)
     } catch (err) {
-      console.error('submitProof tx failed', err)
-      setError(`On-chain submission failed: ${String(err)}`)
+      console.error('quiz-verify failed', err)
+      setError(`Answer submission failed: ${String(err)}`)
       return
     }
-
-    await supabase?.from('submissions').insert({
-      session_id: session.id,
-      player_wallet: walletAddress || '0xPLAYER',
-      question_id: currentQuestion.id,
-      answer_choice: selectedAnswer,
-      proof_hash: attestation?.proofHash ?? null,
-    })
 
     setSelectedAnswer('')
     setCurrentIndex((prev) => Math.min(prev + 1, questions.length))
@@ -311,6 +303,21 @@ export default function SessionPage() {
       />
 
       {error && <p className="error">{error}</p>}
+
+      {/* KRNL authorization panel - hidden while using direct Edge Function calls
+      {session && !isAuthorized && (
+        <section className="panel">
+          <h2>Smart Account Authorization Required</h2>
+          <p>
+            To submit answers on-chain, you need to authorize your smart account.
+            This enables EIP-7702 delegation for secure contract interactions.
+          </p>
+          <button className="primary" onClick={handleAuthorize} disabled={isAuthorizing}>
+            {isAuthorizing ? 'Authorizing...' : 'Authorize Smart Account'}
+          </button>
+        </section>
+      )}
+      */}
 
       {session && currentQuestion && (
         <section className="panel">
