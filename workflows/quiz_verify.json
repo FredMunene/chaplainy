@@ -1,8 +1,14 @@
 {
-  "chain_id": "{{ENV.CHAIN_ID}}",
-  "sender": "{{ENV.SENDER_ADDRESS}}",
-  "delegate": "{{ENV.DELEGATE_ADDRESS}}",
-  "attestor": "{{ENV.ATTESTOR_IMAGE}}",
+  "chain_id": "11155111",
+  "sender": "{{SENDER_ADDRESS}}",
+  "delegate": "0x63cBcf35ea22FC674A23D453628398c60E1D05D5",
+  "attestor": "ghcr.io/krnl-labs/executor-http@sha256:07ef35b261014304a0163502a7f1dec5395c5cac1fc381dc1f79b052389ab0d5",
+  "target": {
+    "contract": "0x63cBcf35ea22FC674A23D453628398c60E1D05D5",
+    "function": "submitProofWithAuth((bytes32,address,bytes32,uint256,bytes32))",
+    "authData_result": "${encode-proof.result}",
+    "parameters": []
+  },
   "sponsor_execution_fee": true,
   "value": "0",
   "intent": {
@@ -11,82 +17,44 @@
     "deadline": "{{TRANSACTION_INTENT_DEADLINE}}"
   },
   "rpc_url": "${_SECRETS.rpcSepoliaURL}",
-  "target": {
-    "contract": "${ENV.QUIZ_SCA_ADDRESS}",
-    "function": "submitProofWithAuth((uint256,uint256,bytes32,(bytes32,bytes,bytes)[],bytes,bool,bytes))",
-    "authData_result": "${encode-proof.result}",
-    "parameters": []
-  },
+  "bundler_url": "https://api.pimlico.io/v2/sepolia/rpc?apikey=${_SECRETS.pimlico-apikey}",
+  "paymaster_url": "https://api.pimlico.io/v2/sepolia/rpc?apikey=${_SECRETS.pimlico-apikey}",
+  "gas_limit": "150000",
+  "max_fee_per_gas": "20000000000",
+  "max_priority_fee_per_gas": "2000000000",
   "workflow": {
     "name": "quiz_verify",
-    "version": "1.0.0",
+    "version": "2.0.0",
     "steps": [
       {
-        "name": "load-question",
-        "type": "HTTP",
-        "image": "${ENV.HTTP_EXECUTOR_IMAGE}",
-        "attestor": "${ENV.ATTESTOR_IMAGE}",
-        "next": "verify-answer",
-        "config": {},
-        "inputs": {
-          "url": "${_SECRETS.supabaseRestUrl}/questions?id=eq.{{INPUT.questionId}}",
-          "method": "GET",
-          "headers": {
-            "apikey": "${_SECRETS.supabaseServiceKey}",
-            "Authorization": "Bearer ${_SECRETS.supabaseServiceKey}"
-          }
-        },
-        "outputs": [
-          {
-            "name": "row",
-            "value": "response.body.0",
-            "export": true
-          }
-        ]
-      },
-      {
         "name": "verify-answer",
-        "type": "HASH_COMPARE",
-        "image": "${ENV.HASH_EXECUTOR_IMAGE}",
-        "attestor": "${ENV.ATTESTOR_IMAGE}",
-        "next": "compute-score",
-        "config": {},
-        "inputs": {
-          "value": {
-            "answer": "{{INPUT.answer}}",
-            "correctHash": "${load-question.row.correct_hash}"
-          }
-        },
-        "outputs": [
-          {
-            "name": "correct",
-            "value": "result.correct",
-            "export": true
-          }
-        ]
-      },
-      {
-        "name": "compute-score",
-        "type": "TRANSFORM",
-        "image": "${ENV.TRANSFORM_EXECUTOR_IMAGE}",
-        "attestor": "${ENV.ATTESTOR_IMAGE}",
+        "type": "HTTP",
+        "image": "ghcr.io/krnl-labs/executor-http@sha256:07ef35b261014304a0163502a7f1dec5395c5cac1fc381dc1f79b052389ab0d5",
         "next": "encode-proof",
         "config": {},
         "inputs": {
-          "value": {
-            "payload": {
-              "sessionId": "{{INPUT.sessionId}}",
-              "player": "{{INPUT.player}}",
-              "questionId": "{{INPUT.questionId}}",
-              "scoreDelta": "${verify-answer.correct}",
-              "proofHash": "${load-question.row.correct_hash}"
-            }
+          "url": "${_SECRETS.supabaseUrl}/functions/v1/quiz-verify",
+          "method": "POST",
+          "headers": {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer ${_SECRETS.supabaseAnonKey}"
+          },
+          "body": {
+            "sessionId": "{{INPUT.sessionId}}",
+            "questionId": "{{INPUT.questionId}}",
+            "answer": "{{INPUT.answer}}",
+            "player": "{{INPUT.player}}"
           }
         },
         "outputs": [
           {
-            "name": "payload",
-            "value": "result.payload",
+            "name": "proofData",
+            "value": "response.body.proofData",
+            "export": true
+          },
+          {
+            "name": "isCorrect",
+            "value": "response.body.isCorrect",
             "export": true
           }
         ]
@@ -94,13 +62,11 @@
       {
         "name": "encode-proof",
         "type": "EVM_ENCODER",
-        "image": "${ENV.ENCODER_EXECUTOR_IMAGE}",
-        "attestor": "${ENV.ATTESTOR_IMAGE}",
-        "next": "store-submission",
+        "image": "ghcr.io/krnl-labs/executor-encoder-evm@sha256:b28823d12eb1b16cbcc34c751302cd2dbe7e35480a5bc20e4e7ad50a059b6611",
         "config": {
           "parameters": [
             {
-              "name": "payload",
+              "name": "proof",
               "type": "tuple",
               "components": [
                 { "name": "sessionId", "type": "bytes32" },
@@ -114,43 +80,13 @@
         },
         "inputs": {
           "value": {
-            "payload": "${compute-score.payload}"
+            "proof": "${verify-answer.proofData}"
           }
         },
         "outputs": [
           {
             "name": "result",
             "value": "result",
-            "export": true
-          }
-        ]
-      },
-      {
-        "name": "store-submission",
-        "type": "HTTP",
-        "image": "${ENV.HTTP_EXECUTOR_IMAGE}",
-        "attestor": "${ENV.ATTESTOR_IMAGE}",
-        "config": {},
-        "inputs": {
-          "url": "${_SECRETS.supabaseRestUrl}/submissions",
-          "method": "POST",
-          "headers": {
-            "Content-Type": "application/json",
-            "apikey": "${_SECRETS.supabaseServiceKey}",
-            "Authorization": "Bearer ${_SECRETS.supabaseServiceKey}"
-          },
-          "body": {
-            "session_id": "{{INPUT.sessionId}}",
-            "player_wallet": "{{INPUT.player}}",
-            "question_id": "{{INPUT.questionId}}",
-            "answer_choice": "{{INPUT.answer}}",
-            "proof_hash": "${compute-score.payload.proofHash}"
-          }
-        },
-        "outputs": [
-          {
-            "name": "stored",
-            "value": "response.body",
             "export": true
           }
         ]

@@ -1,0 +1,187 @@
+{
+  "id": "imported-1769631465564",
+  "name": "quiz_fetch",
+  "description": "Imported workflow with 4 steps",
+  "workflow": {
+    "chain_id": "11155111",
+    "sender": "0x6c550478cEd0F3a3451419CEb38d59e885b2178c",
+    "delegate": "0x63cBcf35ea22FC674A23D453628398c60E1D05D5",
+    "attestor": "image://docker.io/fredgitonga/attestor-chaplainy:latest",
+    "target": {
+      "contract": "0x63cBcf35ea22FC674A23D453628398c60E1D05D5",
+      "function": "",
+      "authData_result": "0x00",
+      "parameters": []
+    },
+    "sponsor_execution_fee": true,
+    "value": "0",
+    "intent": {
+      "id": "{{TRANSACTION_INTENT_ID}}",
+      "signature": "{{USER_SIGNATURE}}",
+      "deadline": "{{TRANSACTION_INTENT_DEADLINE}}"
+    },
+    "rpc_url": "${_SECRETS.rpcSepoliaURL}",
+    "bundler_url": "https://api.pimlico.io/v2/sepolia/rpc?apikey=${_SECRETS.pimlico-apikey}",
+    "paymaster_url": "https://api.pimlico.io/v2/sepolia/rpc?apikey=${_SECRETS.pimlico-apikey}",
+    "gas_limit": "100000",
+    "max_fee_per_gas": "20000000000",
+    "max_priority_fee_per_gas": "2000000000",
+    "workflow": {
+      "name": "quiz_fetch",
+      "version": "1.0.0",
+      "steps": [
+        {
+          "type": "HTTP",
+          "name": "fetch-trivia",
+          "image": "ghcr.io/krnl-labs/executor-http",
+          "attestor": "image://docker.io/fredgitonga/attestor-chaplainy:latest",
+          "next": "normalize-trivia",
+          "config": {},
+          "inputs": [
+            {
+              "name": "url",
+              "type": "string",
+              "value": "https://opentdb.com/api.php?amount={{INPUT.count}}&category={{INPUT.category}}&difficulty={{INPUT.difficulty}}&type={{INPUT.type}}",
+              "required": true,
+              "description": "url parameter"
+            },
+            {
+              "name": "method",
+              "type": "string",
+              "value": "GET",
+              "required": true,
+              "description": "method parameter"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "payload",
+              "value": "response.body",
+              "required": true,
+              "export": true
+            }
+          ]
+        },
+        {
+          "type": "TRANSFORM",
+          "name": "normalize-trivia",
+          "image": "ghcr.io/krnl-labs/executor-transform",
+          "attestor": "image://docker.io/fredgitonga/attestor-chaplainy:latest",
+          "next": "hash-answers",
+          "config": {},
+          "inputs": [
+            {
+              "name": "value",
+              "type": "object",
+              "value": {
+                "sessionId": "{{INPUT.sessionId}}",
+                "raw": "${fetch-trivia.payload}"
+              },
+              "required": true,
+              "description": "value parameter"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "questions",
+              "value": "result.questions",
+              "required": true,
+              "export": true
+            },
+            {
+              "name": "hashed",
+              "value": "result.hashed",
+              "required": true,
+              "export": true
+            }
+          ]
+        },
+        {
+          "type": "HASH",
+          "name": "hash-answers",
+          "image": "ghcr.io/krnl-labs/executor-hash",
+          "attestor": "image://docker.io/fredgitonga/attestor-chaplainy:latest",
+          "next": "store-questions",
+          "config": {},
+          "inputs": [
+            {
+              "name": "value",
+              "type": "string",
+              "value": "${normalize-trivia.hashed}",
+              "required": true,
+              "description": "value parameter"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "rows",
+              "value": "result.rows",
+              "required": true,
+              "export": true
+            }
+          ]
+        },
+        {
+          "type": "HTTP",
+          "name": "store-questions",
+          "image": "ghcr.io/krnl-labs/executor-http",
+          "attestor": "image://docker.io/fredgitonga/attestor-chaplainy:latest",
+          "config": {},
+          "inputs": [
+            {
+              "name": "url",
+              "type": "string",
+              "value": "${_SECRETS.supabaseRestUrl}/questions",
+              "required": true,
+              "description": "url parameter"
+            },
+            {
+              "name": "method",
+              "type": "string",
+              "value": "POST",
+              "required": true,
+              "description": "method parameter"
+            },
+            {
+              "name": "headers",
+              "type": "object",
+              "value": {
+                "Content-Type": "application/json",
+                "apikey": "${_SECRETS.supabaseServiceKey}",
+                "Authorization": "Bearer ${_SECRETS.supabaseServiceKey}"
+              },
+              "required": true,
+              "description": "headers parameter"
+            },
+            {
+              "name": "body",
+              "type": "string",
+              "value": "${hash-answers.rows}",
+              "required": true,
+              "description": "body parameter"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "stored",
+              "value": "response.body",
+              "required": true,
+              "export": true
+            }
+          ]
+        }
+      ]
+    },
+    "dapp": {
+      "name": "quiz_fetch",
+      "targetChainID": 11155111,
+      "targetContractAddress": "0x63cBcf35ea22FC674A23D453628398c60E1D05D5",
+      "targetFunctionSignature": ""
+    }
+  },
+  "createdAt": "2026-01-28T20:17:45.564Z",
+  "modifiedAt": "2026-01-28T20:30:00.000Z",
+  "starred": false,
+  "version": "1.0.0",
+  "format": "dsl-workflow-project"
+}
