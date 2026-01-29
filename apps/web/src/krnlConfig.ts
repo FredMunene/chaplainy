@@ -10,11 +10,14 @@ export const isKrnlConfigured = Boolean(
   privyAppId && krnlNodeUrl && delegatedContractAddress,
 )
 
+const rpcUrl = import.meta.env.SEPOLIA_RPC_URL as string | undefined
+
 export const krnlConfig = isKrnlConfigured
   ? createConfig({
       chain: sepolia,
       delegatedContractAddress: delegatedContractAddress!,
       privyAppId: privyAppId!,
       krnlNodeUrl: krnlNodeUrl!,
+      rpcUrl: rpcUrl || 'https://sepolia.infura.io/v3/f46c7003bea344bea572a8df43cd27fd',
     })
   : null
